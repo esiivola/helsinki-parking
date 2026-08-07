@@ -829,6 +829,10 @@ function App() {
   const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  useEffect(() => {
     if (!timeMenu) return undefined;
     const closePicker = (event) => { if (!timePickerRef.current?.contains(event.target)) setTimeMenu(false); };
     document.addEventListener('pointerdown', closePicker);

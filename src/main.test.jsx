@@ -271,11 +271,13 @@ describe('static search metadata', () => {
 
   it('provides crawlable page metadata and an initial description', () => {
     const html = projectFile('index.html');
+    const source = projectFile('src/main.jsx');
     expect(html).toContain('<link rel="canonical" href="https://esiivola.github.io/helsinki-parking/"');
     expect(html).toContain('<meta name="robots" content="index, follow');
     expect(html).toContain('application/ld+json');
     expect(html).toContain('"@type": "WebApplication"');
     expect(html).toContain('<h1>Helsingin pysäköintikartta</h1>');
+    expect(source).toContain('document.documentElement.lang = lang');
   });
 
   it('publishes crawler instructions and the canonical URL in a sitemap', () => {
