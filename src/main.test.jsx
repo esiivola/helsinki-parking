@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, featuresOverlap, formatParkingCardTransition, formatParkingValidity, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers } from './main.jsx';
+import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, featuresOverlap, formatParkingCardTransition, formatParkingValidity, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers } from './main.jsx';
 
 describe('parking map helpers', () => {
   it('detects a point inside a GeoJSON polygon', () => {
@@ -42,7 +42,7 @@ describe('parking map helpers', () => {
     const sunday = new Date(2026, 7, 9, 17, 50);
     expect(parkingNowStatus(null, friday, urheilukatu.properties.voimassaolo).paid).toBe(true);
     expect(parkingNowStatus(null, sunday, urheilukatu.properties.voimassaolo).paid).toBe(true);
-    expect(parkingPolygonState(urheilukatu, null, friday, [], [], 'fi')).toMatchObject({ status: 'paid', label: 'Maksu · klo 21 asti' });
+    expect(parkingPolygonState(urheilukatu, null, friday, [], [], 'fi')).toMatchObject({ status: 'paid', label: 'Maksullinen · klo 21 asti' });
   });
 
   it('respects Saturday and Sunday omissions in official validity notation', () => {
@@ -106,7 +106,7 @@ describe('parking map helpers', () => {
     expect(unavailable.until).toBeGreaterThan(new Date('2026-08-13T12:00:00').getTime());
     const free = parkingPolygonState(space, '1', new Date('2026-08-10T23:00:00'), [], [], 'fi');
     expect(free.status).toBe('freeLong');
-    expect(free.label).toBe('Maksuton · maksu alkaa ti klo 9');
+    expect(free.label).toBe('Maksuton · ti klo 9 asti');
     expect(free.nextPaidAt).toBeInstanceOf(Date);
   });
 
@@ -222,7 +222,7 @@ describe('parking map helpers', () => {
   it('adds public OSM halls but keeps LIIPI as the preferred duplicate', () => {
     const origin = [60.17, 24.94];
     const osm = osmFacilities({ elements: [
-      { type: 'node', id: 1, lat: 60.1702, lon: 24.9402, tags: { amenity: 'parking', parking: 'underground', name: 'P-Testi', capacity: '200', charge: '4 EUR/hour' } },
+      { type: 'node', id: 1, lat: 60.1702, lon: 24.9402, tags: { amenity: 'parking', parking: 'underground', name: 'P-Testi', capacity: '200', charge: '4 EUR/hour', opening_hours: '24/7', operator: 'Testi Oy', website: 'https://example.test/' } },
       { type: 'node', id: 2, lat: 60.18, lon: 24.95, tags: { amenity: 'parking', parking: 'underground', name: 'Private', access: 'private' } },
     ] }, origin);
     const liipi = [{ id: 9, name: 'Testi', point: [60.1701, 24.9401], distance: 15, spacesAvailable: 42, price: null, source: 'liipi' }];
@@ -231,12 +231,25 @@ describe('parking map helpers', () => {
     expect(merged[0].spacesAvailable).toBe(42);
     expect(merged[0].price).toBe('4 EUR/hour');
     expect(merged[0].capacity).toBe(200);
+    expect(merged[0].openingHours).toBe('24/7');
+    expect(merged[0].operator).toBe('Testi Oy');
+    expect(merged[0].website).toBe('https://example.test/');
   });
 
   it('keeps nearby parking halls with different names separate', () => {
     const liipi = [{ id: 1, name: 'Kluuvi', point: [60.17, 24.94], distance: 10, source: 'liipi' }];
     const osm = [{ id: 'osm-2', name: 'Asema', point: [60.1703, 24.9403], distance: 35, source: 'osm' }];
     expect(mergeFacilities(liipi, osm)).toHaveLength(2);
+  });
+
+  it('normalizes Service Map halls and excludes explicitly outdoor parking areas', () => {
+    const origin = [60.17, 24.94];
+    const facilities = serviceMapFacilities({ results: [
+      { id: 1, name: { fi: 'Marketparkki' }, short_description: { fi: 'Parkkihalli on auki 24/7.' }, location: { coordinates: [24.941, 60.171] }, www: { fi: 'https://example.test/halli' }, organizer_name: 'Testi Oy' },
+      { id: 2, name: { fi: 'Ulkopaikka' }, short_description: { fi: 'Ulkoalue' }, location: { coordinates: [24.942, 60.172] } },
+    ] }, origin, 'fi');
+    expect(facilities).toHaveLength(1);
+    expect(facilities[0]).toMatchObject({ name: 'Marketparkki', openingHours: '24/7', website: 'https://example.test/halli', operator: 'Testi Oy', source: 'service-map' });
   });
 
   it('extracts a compact price for parking-hall map markers', () => {
@@ -289,6 +302,19 @@ describe('static search metadata', () => {
     const source = projectFile('src/main.jsx');
     expect(source).toContain("light_all/{z}/{x}/{y}.png");
     expect(source).not.toContain("light_all/{z}/{x}/{y}{r}.png");
+  });
+
+  it('uses natural Finnish wording and omits unreliable street occupancy', () => {
+    const source = projectFile('src/main.jsx');
+    expect(source).toContain('Väliaikaisesti poissa käytöstä');
+    expect(source).toContain('Pysäköintihallit lähellä');
+    expect(source).toContain('Tarkista hinnat ja aukioloajat');
+    expect(source).not.toContain('PARKKIHUBI');
+    expect(source).not.toContain('Kadunvarsipaikkojen tilanne');
+  });
+
+  it('builds for maintained Android Firefox versions', () => {
+    expect(projectFile('vite.config.js')).toContain("target: ['es2019', 'firefox91']");
   });
 
   it('documents the live service and deploys the production build to GitHub Pages', () => {

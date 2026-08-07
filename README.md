@@ -16,7 +16,7 @@ Liikennemerkki ratkaisee aina. Avoin data voi olla puutteellista tai vanhentunut
 
 ## Tietolähteet
 
-Palvelu hyödyntää Helsingin kaupungin, HRI:n, Palvelukartan, Fintrafficin ja OpenStreetMapin avoimia aineistoja. Tarkemmat lähde- ja lisenssitiedot löytyvät palvelun tietopaneelista.
+Palvelu hyödyntää Helsingin kaupungin, HRI:n, Palvelukartan ja OpenStreetMapin avoimia aineistoja. Tarkemmat lähde- ja lisenssitiedot löytyvät palvelun tietopaneelista.
 
 ## Paikallinen kehitys
 

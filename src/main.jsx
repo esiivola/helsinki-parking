@@ -20,10 +20,10 @@ import {
 
 const HELSINKI = [60.16986, 24.93838];
 const WFS = 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs';
-const LIIPI = import.meta.env.DEV ? '/api/fintraffic/api/v1' : 'https://parking.fintraffic.fi/api/v1';
-const PARKKIHUBI = 'https://pubapi.parkkiopas.fi/public/v1';
+const LIIPI = '/api/fintraffic/api/v1';
 const SIIRTOVAHTI = 'https://liikenne-elastic-proxy.api.hel.ninja/mobilenote_data/_search';
 const SERVICE_MAP = 'https://api.hel.fi/servicemap/v2/administrative_division/';
+const SERVICE_MAP_FACILITIES = 'https://api.hel.fi/servicemap/v2/unit/?service=537&municipality=helsinki&page_size=200';
 const OVERPASS = import.meta.env.DEV ? '/api/overpass/api/interpreter' : 'https://overpass-api.de/api/interpreter';
 const MIN_PARKING_ZOOM = 16;
 export const DEFAULT_MAP_ZOOM = MIN_PARKING_ZOOM;
@@ -34,18 +34,17 @@ const copy = {
   fi: {
     appName: 'PARKKI', region: 'Helsinki', locating: 'Haetaan sijaintia…', locationReady: 'Sijaintisi', locationFallback: 'Helsingin keskusta',
     when: 'Pysäköintiaika', date: 'Päivä', time: 'Kellonaika', today: 'Tänään', now: 'Nyt', paidAtTime: 'Maksullinen', freeAtTime: 'Maksuton', paidUntil: 'Maksullinen asti', chargingStarts: 'Maksu alkaa', maxStay: 'Enintään', mapHint: 'Valitse pysäköintipaikka kartalta', detailsSummary: 'Lisätiedot',
-    freeLegend: 'Maksuton', freeLongLegend: 'Maksuton', freeShortLegend: 'Maksuton alle 60 min', paidLegend: 'Maksullinen', unavailableLegend: 'Poissa käytöstä', freeLabel: 'Vapaa', paidLabel: 'Maksu', unavailableLabel: 'Tilapäisesti poissa käytöstä', upcomingException: 'Tuleva poikkeus', activeException: 'Voimassa oleva poikkeus', starts: 'Alkaa', ends: 'Päättyy', noTimeLimit: 'ei aikarajaa', limitUnknown: 'aikaraja ei tiedossa', scheduleUnknown: 'maksulliset ajat tarkistettava', withDisc: 'kiekolla',
+    freeLegend: 'Maksuton', freeLongLegend: 'Maksuton', freeShortLegend: 'Maksuton alle 60 min', paidLegend: 'Maksullinen', unavailableLegend: 'Väliaikaisesti poissa käytöstä', freeLabel: 'Vapaa', paidLabel: 'Maksullinen', unavailableLabel: 'Väliaikaisesti poissa käytöstä', upcomingException: 'Tuleva poikkeus', activeException: 'Voimassa oleva poikkeus', starts: 'Alkaa', ends: 'Päättyy', noTimeLimit: 'ei aikarajaa', limitUnknown: 'aikaraja ei tiedossa', scheduleUnknown: 'maksulliset ajat tarkistettava', withDisc: 'kiekolla',
     mapLayers: 'Karttatasot', street: 'Kadunvarsipaikat', priceZones: 'Maksuvyöhykkeet', residentZones: 'Asukasvyöhykkeet', closures: 'Työt ja tapahtumat', removals: 'Siirtokehotukset',
     here: 'Tässä paikassa', tapHint: 'Napauta kartalta pysäköintipaikkaa', noMappedSpot: 'Ei tunnistettua pysäköintipaikkaa', noMappedSpotBody: 'Tälle pisteelle ei löytynyt avointa paikkatietoa. Tarkista aina liikennemerkki.',
     paid: 'Maksullinen pysäköinti', free: 'Maksuton pysäköinti', disc: 'Kiekkopaikka', resident: 'Asukaspysäköinti', disabled: 'Invapaikka', loading: 'Kuormauspaikka', restricted: 'Rajoitettu pysäköinti',
     perHour: '/ tunti', freeNow: 'Maksuton nyt', paidNow: 'Maksullinen nyt', nextFree: 'Maksuton klo 21 jälkeen', saturdayFree: 'Maksuton klo 18 jälkeen', allDayFree: 'Maksuton koko päivän',
     hours: 'Maksulliset ajat', weekdays: 'Ma–pe', saturday: 'Lauantai', sunday: 'Sunnuntai', signException: 'Paikkakohtainen voimassaolo', zone: 'Maksuvyöhyke', residentArea: 'Asukasvyöhyke', permit: 'Asukastunnus', estimatedSpaces: 'Arvioitu paikkamäärä',
     notices: 'Huomiot', closureActive: 'Työ tai tapahtuma alueella', closureBody: 'Lupa-alue leikkaa valitun pysäköintipaikan. Paikkoja voi olla tilapäisesti pois käytöstä.', removalActive: 'Siirtokehotus tämän paikan lähellä', removalBody: 'Kaupungin Siirtovahti näyttää siirtokehotuksen tällä katuosuudella.', removalPeriod: 'Voimassa', maintenanceUnavailable: 'Aura-ajoneuvojen live-syöte ei ole käytettävissä', maintenanceBody: 'Siirtokehotukset tarkistetaan kaupungin Siirtovahti-palvelusta. Kadulla oleva merkki ratkaisee.', officialRule: 'Palvelukartan virallinen kuvaus', officialRestriction: 'Pysäköinti kielletty', officialRestrictionHint: 'Virallinen rajoitus · tarkista liikennemerkki',
-    occupancy: 'Kadunvarsipaikkojen tilanne', occupancyLoading: 'Haetaan arviota…', occupancyUnavailable: 'Live-arviota ei saatavilla', occupancyHint: 'Arvio ei sisällä asukaspysäköintiä eikä takaa vapaata paikkaa.', spacesHint: 'arviolta vapaana',
-    nearby: 'Pysäköintilaitokset lähellä', live: 'LIVE', open: 'Auki nyt', closed: 'Suljettu nyt', statusUnknown: 'Aukiolo ei tiedossa', spaces: 'vapaana', totalSpaces: 'paikkaa', distance: 'etäisyys', priceUnavailable: 'Hinta ei tiedossa', forecast: '+2 h ennuste', facilitiesLoading: 'Haetaan pysäköintilaitoksia…', facilitiesEmpty: 'Lähistöltä ei löytynyt julkisia pysäköintilaitoksia.',
+    nearby: 'Pysäköintihallit lähellä', live: 'Ajantasainen', open: 'Avoinna', closed: 'Suljettu', statusUnknown: 'Aukioloaika ei tiedossa', spaces: 'paikkaa vapaana', totalSpaces: 'Paikkoja yhteensä', distance: 'Etäisyys', priceUnavailable: 'Hinta ei tiedossa', forecast: 'Arvio 2 tunnin kuluttua', facilitiesLoading: 'Haetaan pysäköintihalleja…', facilitiesEmpty: 'Lähistöltä ei löytynyt pysäköintihalleja.', openingHours: 'Aukioloajat', operator: 'Ylläpitäjä', officialSite: 'Tarkista hinnat ja aukioloajat',
     sources: 'Tietolähteet', advisory: 'Liikennemerkki ratkaisee', disclaimer: 'Sivustolle kootut tiedot voivat olla vanhentuneita tai vääriä. Tarkista aina liikennemerkki ennen pysäköintiä',
-    locate: 'Näytä sijaintini', refresh: 'Päivitä tiedot', close: 'Sulje', details: 'Tiedot', showList: 'Lähialueen hallit', dataUpdated: 'Aineisto päivitetty', dataUpdating: 'Päivitetään aineistoa', spotCount: 'paikkaa kartalla', zoomIn: 'Lähennä nähdäksesi pysäköintipaikat', hour: 'Tunti', minute: 'Minuutti',
-    permissions: 'GPS sijainti ei käytettävissä', privacy: 'Sijaintia käytetään vain selaimessasi.', more: 'Lisätiedot', cc: '© Helsingin kaupunki / HRI / Palvelukartta, CC BY 4.0 · © Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
+    locate: 'Näytä sijaintini', refresh: 'Päivitä tiedot', close: 'Sulje', details: 'Tiedot', showList: 'Lähialueen hallit', dataUpdated: 'Tiedot päivitetty', dataUpdating: 'Päivitetään tietoja', spotCount: 'pysäköintipaikkaa kartalla', zoomIn: 'Lähennä karttaa nähdäksesi pysäköintipaikat', hour: 'Tunti', minute: 'Minuutti',
+    permissions: 'Sijaintia ei voitu käyttää', privacy: 'Sijaintitietoa käsitellään vain selaimessasi.', more: 'Lisätiedot', cc: '© Helsingin kaupunki / HRI / Palvelukartta, CC BY 4.0 · © OpenStreetMap, ODbL',
   },
   en: {
     appName: 'PARKKI', region: 'Helsinki', locating: 'Finding your location…', locationReady: 'Your location', locationFallback: 'Helsinki city centre',
@@ -57,27 +56,25 @@ const copy = {
     perHour: '/ hour', freeNow: 'Free now', paidNow: 'Paid now', nextFree: 'Free after 21:00', saturdayFree: 'Free after 18:00', allDayFree: 'Free all day',
     hours: 'Chargeable hours', weekdays: 'Mon–Fri', saturday: 'Saturday', sunday: 'Sunday', signException: 'Space-specific validity', zone: 'Payment zone', residentArea: 'Resident zone', permit: 'Resident permit', estimatedSpaces: 'Estimated capacity',
     notices: 'Advisories', closureActive: 'Works or event in this area', closureBody: 'The permit area overlaps the selected parking space. Spaces may be temporarily unavailable.', removalActive: 'Relocation notice near this space', removalBody: 'The City Siirtovahti service shows a relocation notice on this street section.', removalPeriod: 'Valid', maintenanceUnavailable: 'Live snow-plough positions are unavailable', maintenanceBody: 'Relocation notices are checked through the City Siirtovahti service. The street sign is final.', officialRule: 'Official Service Map description', officialRestriction: 'Parking prohibited', officialRestrictionHint: 'Official restriction · check the street sign',
-    occupancy: 'On-street availability', occupancyLoading: 'Checking estimate…', occupancyUnavailable: 'Live estimate unavailable', occupancyHint: 'Estimate excludes resident parking and does not guarantee a free space.', spacesHint: 'estimated free',
-    nearby: 'Nearby parking facilities', live: 'LIVE', open: 'Open now', closed: 'Closed now', statusUnknown: 'Hours unavailable', spaces: 'available', totalSpaces: 'spaces', distance: 'distance', priceUnavailable: 'Price unavailable', forecast: '+2 h forecast', facilitiesLoading: 'Finding parking facilities…', facilitiesEmpty: 'No public parking facilities were found nearby.',
+    nearby: 'Nearby parking facilities', live: 'Live', open: 'Open', closed: 'Closed', statusUnknown: 'Opening hours unavailable', spaces: 'spaces available', totalSpaces: 'Total spaces', distance: 'Distance', priceUnavailable: 'Price unavailable', forecast: 'Estimate in 2 hours', facilitiesLoading: 'Finding parking facilities…', facilitiesEmpty: 'No parking facilities were found nearby.', openingHours: 'Opening hours', operator: 'Operator', officialSite: 'Check prices and opening hours',
     sources: 'Data sources', advisory: 'Street signs are final', disclaimer: 'Information collected on this site may be outdated or incorrect. Always check the traffic sign before parking.',
     locate: 'Show my location', refresh: 'Refresh data', close: 'Close', details: 'Details', showList: 'Nearby facilities', dataUpdated: 'Data updated', dataUpdating: 'Updating data', spotCount: 'spaces on map', zoomIn: 'Zoom in to see parking spaces', hour: 'Hour', minute: 'Minute',
-    permissions: 'GPS location unavailable', privacy: 'Your location stays in this browser.', more: 'More information', cc: '© City of Helsinki / HRI / Service Map, CC BY 4.0 · © Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
+    permissions: 'Location could not be used', privacy: 'Your location is processed only in this browser.', more: 'More information', cc: '© City of Helsinki / HRI / Service Map, CC BY 4.0 · © OpenStreetMap, ODbL',
   },
 };
 
 const sourceInfo = {
   fi: {
     title: 'Tietoa palvelusta',
-    intro: 'Palvelu yhdistää avoimia tietolähteitä yhdeksi pysäköintinäkymäksi. Tiedot voivat muuttua, joten kadun liikennemerkki ratkaisee aina.',
+    intro: 'Palvelu kokoaa avoimet pysäköintitiedot yhteen näkymään. Tiedot voivat olla puutteellisia tai vanhentuneita, joten liikennemerkki ratkaisee aina.',
     rows: [
       { name: 'Kadunvarsipaikat ja pysäköintivyöhykkeet', detail: 'Helsingin kaupunki / Helsinki Region Infoshare: sijainti, pysäköintiluokka, aikaraja, voimassaolo sekä maksu- ja asukasvyöhykkeet.', href: 'https://hri.fi/data/fi/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
       { name: 'Paikan virallinen kuvaus', detail: 'Helsingin Palvelukartta: valitun pysäköintipaikan virallinen kuvaus ja voimassaoloaika.', href: 'https://palvelukartta.hel.fi/' },
       { name: 'Työt, tapahtumat ja siirtokehotukset', detail: 'Helsingin kaupungin avoin paikkatieto ja Siirtovahti.', href: 'https://siirtovahti.hel.fi/' },
-      { name: 'Kadunvarsipaikkojen käyttöaste', detail: 'Parkkiopas: saatavuusarvio, kun tietoa on kyseiselle alueelle.', href: 'https://parkkiopas.fi/' },
-      { name: 'Pysäköintilaitokset', detail: 'Fintraffic LIIPI: kapasiteetti ja saatavuus. OpenStreetMap täydentää laitosten sijainteja, nimiä ja hintoja.', href: 'https://parking.fintraffic.fi/docs/index.html' },
+      { name: 'Pysäköintihallit', detail: 'Helsingin Palvelukartta ja OpenStreetMap: sijainnit sekä saatavilla olevat hinta- ja aukiolotiedot. Hallikohtainen linkki vie ylläpitäjän ajantasaisiin tietoihin.', href: 'https://palvelukartta.hel.fi/' },
       { name: 'Taustakartta', detail: 'OpenStreetMapin karttatiedot ja CARTOn karttatiilet.', href: 'https://www.openstreetmap.org/copyright' },
     ],
-    licence: 'Helsingin kaupungin ja Fintrafficin aineistot CC BY 4.0 · OpenStreetMap ODbL.',
+    licence: 'Helsingin kaupungin aineistot CC BY 4.0 · OpenStreetMap ODbL.',
     maker: 'Sivuston tekijän kotisivut:',
   },
   en: {
@@ -87,11 +84,10 @@ const sourceInfo = {
       { name: 'On-street spaces and parking zones', detail: 'City of Helsinki / Helsinki Region Infoshare: location, parking class, time limit, validity, payment zones and resident zones.', href: 'https://hri.fi/data/en/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
       { name: 'Official description', detail: 'Helsinki Service Map: the official description and validity of the selected parking space.', href: 'https://palvelukartta.hel.fi/en/' },
       { name: 'Works, events and relocation notices', detail: 'City of Helsinki open spatial data and Siirtovahti.', href: 'https://siirtovahti.hel.fi/' },
-      { name: 'On-street occupancy', detail: 'Parkkiopas: availability estimate where the area is covered.', href: 'https://parkkiopas.fi/' },
-      { name: 'Parking facilities', detail: 'Fintraffic LIIPI: capacity and availability. OpenStreetMap supplements locations, names and prices.', href: 'https://parking.fintraffic.fi/docs/index.html' },
+      { name: 'Parking facilities', detail: 'Helsinki Service Map and OpenStreetMap: locations and available price and opening-hour data. Facility links lead to the operator’s current information.', href: 'https://palvelukartta.hel.fi/en/' },
       { name: 'Base map', detail: 'OpenStreetMap map data and CARTO map tiles.', href: 'https://www.openstreetmap.org/copyright' },
     ],
-    licence: 'City of Helsinki and Fintraffic data CC BY 4.0 · OpenStreetMap ODbL.',
+    licence: 'City of Helsinki data CC BY 4.0 · OpenStreetMap ODbL.',
     maker: 'Service by',
   },
 };
@@ -240,6 +236,31 @@ export function osmFacilities(data, origin) {
   }).filter((facility) => facility && facility.distance < 8000).sort((a, b) => a.distance - b.distance);
 }
 
+export function serviceMapFacilities(data, origin, lang = 'fi') {
+  const outdoorPattern = /\bulkoalue\b|\boutdoor (?:area|parking)\b|\bpysäköintialue\b/i;
+  return (data?.results || []).map((unit) => {
+    const [longitude, latitude] = unit.location?.coordinates || [];
+    const description = [unit.short_description?.fi, unit.short_description?.en, unit.description?.fi, unit.description?.en].filter(Boolean).join(' ');
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || outdoorPattern.test(description)) return null;
+    const point = [latitude, longitude];
+    const alwaysOpen = /(?:auki|avoinna|open)\s*24\s*\/\s*7/i.test(description);
+    return {
+      id: `service-map-${unit.id}`,
+      name: unit.name?.[lang] || unit.name?.fi || unit.name?.en || 'Pysäköintihalli',
+      point,
+      distance: haversine(origin, point),
+      openNow: alwaysOpen ? true : null,
+      openingHours: alwaysOpen ? '24/7' : '',
+      capacity: null,
+      spacesAvailable: null,
+      price: null,
+      operator: unit.organizer_name || '',
+      website: unit.www?.[lang] || unit.www?.fi || unit.www?.en || '',
+      source: 'service-map',
+    };
+  }).filter((facility) => facility && facility.distance < 8000).sort((a, b) => a.distance - b.distance);
+}
+
 function normalizedName(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9åäö]+/g, ' ').replace(/\b(p|parking|parkki|pysäköinti)\b/g, '').trim();
 }
@@ -254,6 +275,7 @@ export function mergeFacilities(primary, fallback, limit = 30) {
       if (!match.website && candidate.website) match.website = candidate.website;
       if (!match.operator && candidate.operator) match.operator = candidate.operator;
       if (!match.capacity && candidate.capacity) match.capacity = candidate.capacity;
+      if (!match.openingHours && candidate.openingHours) match.openingHours = candidate.openingHours;
     } else merged.push(candidate);
   }
   return merged.sort((a, b) => a.distance - b.distance).slice(0, limit);
@@ -539,7 +561,7 @@ export function parkingPolygonState(feature, zone, date, closures = [], notices 
   }
   const nextPaidAt = paidKind ? nextPaidStart(zone, date, validity) : null;
   const status = durationMinutes !== null && durationMinutes < 60 ? 'freeShort' : 'freeLong';
-  const label = nextPaidAt ? `${labels.freeLegend} · ${lang === 'fi' ? `maksu alkaa ${formatParkingDeadline(nextPaidAt, date, lang)}` : `charging starts ${formatParkingDeadline(nextPaidAt, date, lang)}`}`
+  const label = nextPaidAt ? `${labels.freeLegend} · ${lang === 'fi' ? `${formatParkingDeadline(nextPaidAt, date, lang)} asti` : `until ${formatParkingDeadline(nextPaidAt, date, lang)}`}`
     : durationMinutes === Infinity ? `${labels.freeLegend} · ${labels.noTimeLimit}`
       : duration ? (meta.kind === 'disc' ? `${duration} ${labels.withDisc}` : `${labels.freeLegend} · ${labels.maxStay.toLowerCase()} ${duration}`)
         : `${labels.freeLegend}${meta.kind === 'disc' ? ` ${labels.withDisc}` : ''} · ${labels.limitUnknown}`;
@@ -704,7 +726,7 @@ function SourcePanel({ lang, onClose }) {
   </div>;
 }
 
-function ParkingPanel({ selected, lang, occupancy, exceptions, serviceMap, parkingTime, onClose }) {
+function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTime, onClose }) {
   const t = copy[lang];
   if (!selected) return null;
   const { meta, zone, resident } = selected;
@@ -733,7 +755,7 @@ function ParkingPanel({ selected, lang, occupancy, exceptions, serviceMap, parki
         : duration ? `${t.maxStay} ${duration}` : '';
   const showDurationFact = Boolean(duration && (officialRestriction || activeException || scheduleUnknown || paidUntil || nextPaidAt));
   const hasKeyFacts = showDurationFact || hasPermit;
-  const hasDetails = Boolean(zone || meta.validity || serviceMap?.name?.[lang] || occupancy.status === 'ready');
+  const hasDetails = Boolean(zone || meta.validity || serviceMap?.name?.[lang]);
   const scheduleLabel = serviceMap?.extra?.validity_period || formatParkingValidity(meta.validity, lang);
   return (
     <section className="place-card">
@@ -755,7 +777,6 @@ function ParkingPanel({ selected, lang, occupancy, exceptions, serviceMap, parki
         <div className="detail-rows">
           {zone && <div><span>{t.zone}</span><strong>{zone}</strong></div>}
           {['paid', 'resident'].includes(meta.kind) && scheduleLabel && <div><span>{t.hours}</span><strong>{scheduleLabel}</strong></div>}
-          {occupancy.status === 'ready' && <div><span>{t.occupancy}</span><strong>≈ {occupancy.free} {t.spacesHint}</strong></div>}
           {serviceMap?.name?.[lang] && <div><span>{t.officialRule}</span><strong>{serviceMap.name[lang]}{serviceMap.extra?.validity_period ? ` · ${serviceMap.extra.validity_period}` : ''}</strong></div>}
         </div>
       </details>}
@@ -772,14 +793,15 @@ function FacilityPanel({ facility, lang, onClose }) {
   const predictedSpaces = Number.isFinite(facility.predictedSpaces) ? facility.predictedSpaces : null;
   const statusKnown = typeof facility.openNow === 'boolean';
   const headline = liveSpaces !== null ? `${liveSpaces} ${t.spaces}`
-    : compactPrice || (predictedSpaces !== null ? `≈ ${predictedSpaces} ${t.spaces}` : status);
+    : compactPrice || (predictedSpaces !== null ? `≈ ${predictedSpaces} ${t.spaces}` : t.priceUnavailable);
   const subline = liveSpaces !== null && compactPrice ? compactPrice
     : liveSpaces !== null && statusKnown ? status
       : compactPrice && statusKnown ? status
-        : predictedSpaces !== null ? t.forecast : '';
+        : predictedSpaces !== null ? t.forecast
+          : statusKnown ? status : facility.openingHours || '';
   const priceState = facility.openNow === false ? 'unavailable' : /maksuton|free/i.test(compactPrice || '') ? 'free' : 'neutral';
   const showPredictedDetail = predictedSpaces !== null && liveSpaces !== null;
-  const hasDetails = showPredictedDetail || Number.isFinite(facility.capacity) || (facility.price && facility.price !== compactPrice);
+  const hasDetails = showPredictedDetail || Number.isFinite(facility.capacity) || (facility.price && facility.price !== compactPrice) || facility.openingHours || facility.operator;
   return (
     <section className="place-card facility-card">
       <button className="panel-close" onClick={onClose} aria-label={t.close}><X size={17} /></button>
@@ -792,8 +814,11 @@ function FacilityPanel({ facility, lang, onClose }) {
       {hasDetails && <div className="detail-rows facility-details">
         {showPredictedDetail && <div><span>{t.forecast}</span><strong>≈ {facility.predictedSpaces}</strong></div>}
         {Number.isFinite(facility.capacity) && <div><span>{t.totalSpaces}</span><strong>{facility.capacity}</strong></div>}
+        {facility.openingHours && <div><span>{t.openingHours}</span><strong>{facility.openingHours}</strong></div>}
+        {facility.operator && <div><span>{t.operator}</span><strong>{facility.operator}</strong></div>}
         {facility.price && facility.price !== compactPrice && <div><span>{t.details}</span><strong>{facility.price}</strong></div>}
       </div>}
+      {facility.website && <a className="facility-website" href={facility.website} target="_blank" rel="noreferrer">{t.officialSite}<ExternalLink size={14} /></a>}
     </section>
   );
 }
@@ -814,7 +839,6 @@ function App() {
   const [parkingTime, setParkingTime] = useState(() => ceilToFiveMinutes());
   const [mapZoom, setMapZoom] = useState(DEFAULT_MAP_ZOOM);
   const [selected, setSelected] = useState(null);
-  const [occupancy, setOccupancy] = useState({ status: 'idle' });
   const [layerMenu, setLayerMenu] = useState(false);
   const [timeMenu, setTimeMenu] = useState(false);
   const [layers, setLayers] = useState({ street: true, zones: false, residents: false });
@@ -1038,27 +1062,6 @@ function App() {
   }, [spots, layers.street, lang, analyzePoint, t.street, parkingTime, mapData.zones, mapData.closures, removalNotices]);
 
   useEffect(() => {
-    if (!selected?.feature) { setOccupancy({ status: 'idle' }); return; }
-    const controller = new AbortController();
-    const [lat, lon] = selected.point;
-    const bbox = `${lon - 0.0015},${lat - 0.001},${lon + 0.0015},${lat + 0.001}`;
-    setOccupancy({ status: 'loading' });
-    Promise.all([
-      jsonWithTimeout(`${PARKKIHUBI}/parking_area/?format=json&in_bbox=${bbox}&page_size=300`, 7000, controller.signal),
-      jsonWithTimeout(`${PARKKIHUBI}/parking_area_statistics/?format=json&in_bbox=${bbox}&page_size=300`, 7000, controller.signal),
-    ]).then(([areas, stats]) => {
-      const area = (areas.features || []).find((f) => pointInFeature([lon, lat], f));
-      const statRows = stats.results || stats.features || stats;
-      const stat = Array.isArray(statRows) ? statRows.find((row) => (row.id || row.parking_area_id || row.properties?.id) === area?.id) : null;
-      const capacity = area?.properties?.capacity_estimate;
-      const current = stat?.current_parking_count ?? stat?.properties?.current_parking_count;
-      if (Number.isFinite(capacity) && Number.isFinite(current)) setOccupancy({ status: 'ready', free: Math.max(0, Math.round(capacity - current)) });
-      else setOccupancy({ status: 'unavailable' });
-    }).catch(() => { if (!controller.signal.aborted) setOccupancy({ status: 'unavailable' }); });
-    return () => controller.abort();
-  }, [selected]);
-
-  useEffect(() => {
     const originId = selected?.feature?.properties?.id;
     if (!originId) { setServiceMap(null); return; }
     const controller = new AbortController();
@@ -1075,13 +1078,22 @@ function App() {
 
   const loadFacilities = useCallback(async () => {
     const origin = location.point;
+    const serviceMapPromise = jsonWithTimeout(SERVICE_MAP_FACILITIES, 12000)
+      .then((data) => serviceMapFacilities(data, origin, lang))
+      .catch(() => []);
+    const visibleServiceMapPromise = serviceMapPromise.then((facilitiesFromServiceMap) => {
+      if (facilitiesFromServiceMap.length) setFacilities(facilitiesFromServiceMap.slice(0, 30));
+      return facilitiesFromServiceMap;
+    });
     const osmPromise = jsonWithTimeout(overpassUrl(origin), 22000)
       .then((data) => osmFacilities(data, origin))
       .catch(() => []);
-    const visibleOsmPromise = osmPromise.then((osm) => {
-      if (osm.length) setFacilities(osm.slice(0, 30));
-      return osm;
-    });
+    const openDataPromise = Promise.all([visibleServiceMapPromise, osmPromise])
+      .then(([serviceMapRows, osm]) => mergeFacilities(serviceMapRows, osm, 30));
+    if (!import.meta.env.DEV) {
+      setFacilities(await openDataPromise);
+      return;
+    }
     try {
       const page = await jsonWithTimeout(`${LIIPI}/facilities.geojson?limit=-1`, 30000);
       const all = page.features || [];
@@ -1111,13 +1123,20 @@ function App() {
           ]);
           const carPredictions = (prediction || []).filter((row) => row.capacityType === 'CAR');
           const predicted = carPredictions.find((row) => row.usage === 'COMMERCIAL') || carPredictions[0];
-          return { ...facility, price: parsePrice(detail, lang), openNow: detail?.openingHours?.openNow ?? facility.openNow, predictedSpaces: predicted?.spacesAvailable };
+          return {
+            ...facility,
+            price: parsePrice(detail, lang),
+            openNow: detail?.openingHours?.openNow ?? facility.openNow,
+            openingHours: detail?.openingHours?.info?.[lang] || detail?.openingHours?.info?.fi || '',
+            website: detail?.openingHours?.url || detail?.paymentInfo?.url || '',
+            predictedSpaces: predicted?.spacesAvailable,
+          };
         } catch { return facility; }
       }));
-      const osm = await visibleOsmPromise;
-      setFacilities(mergeFacilities([...enriched, ...withUtilization.slice(10)], osm, 30));
+      const openData = await openDataPromise;
+      setFacilities(mergeFacilities([...enriched, ...withUtilization.slice(10)], openData, 30));
     } catch {
-      setFacilities((await visibleOsmPromise).slice(0, 30));
+      setFacilities(await openDataPromise);
     }
   }, [location.point, lang]);
 
@@ -1196,7 +1215,7 @@ function App() {
       {location.message && !timeMenu && !layerMenu && <div className="location-message" role="status"><AlertTriangle size={16} />{location.message}<button onClick={() => setLocation((v) => ({ ...v, message: null }))} aria-label={t.close}><X size={16} /></button></div>}
 
       <aside className={`bottom-sheet place-sheet ${selected && mobilePanel !== 'facility' ? 'open' : ''}`}>
-        <ParkingPanel selected={selected} lang={lang} occupancy={occupancy} exceptions={selectedExceptions} serviceMap={serviceMap} parkingTime={parkingTime} onClose={() => { setSelected(null); setMobilePanel(null); }} />
+        <ParkingPanel selected={selected} lang={lang} exceptions={selectedExceptions} serviceMap={serviceMap} parkingTime={parkingTime} onClose={() => { setSelected(null); setMobilePanel(null); }} />
       </aside>
 
       <aside className={`bottom-sheet facility-sheet ${mobilePanel === 'facility' ? 'open' : ''}`}>
@@ -1313,8 +1332,9 @@ const clarityStyles = `
   .parking-summary h2{margin:0;color:var(--ink);font-size:var(--type-display);line-height:1.12;letter-spacing:-.025em}
   .parking-summary p{margin:5px 0 0;color:#4e5851;font-size:var(--type-body);font-weight:650;line-height:1.35}
   .parking-summary.neutral{color:#2457d6}
-  .facility-name{margin-top:13px;font-size:var(--type-label);line-height:1.3}
-  .parking-summary.facility{margin-top:13px}
+   .facility-name{margin-top:13px;font-size:var(--type-label);line-height:1.3}
+   .parking-summary.facility{margin-top:13px}
+   .facility-website{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:0 1px;border-top:1px solid var(--line);color:#2457d6;font-size:var(--type-body);font-weight:750;text-decoration:none}.facility-website:hover,.facility-website:focus-visible{text-decoration:underline;outline:0}.facility-website svg{flex:0 0 auto}
   .card-key-facts{display:flex;margin:16px 0 0;padding:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .card-key-facts>div{min-width:0;flex:1;padding:11px 12px 10px 0}
   .card-key-facts>div+div{padding-left:12px;border-left:1px solid var(--line)}
