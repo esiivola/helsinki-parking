@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /helsinki-parking/
+
+Sitemap: https://esiivola.github.io/helsinki-parking/sitemap.xml
