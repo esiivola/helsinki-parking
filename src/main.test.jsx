@@ -288,4 +288,15 @@ describe('static search metadata', () => {
     expect(source).toContain("light_all/{z}/{x}/{y}.png");
     expect(source).not.toContain("light_all/{z}/{x}/{y}{r}.png");
   });
+
+  it('documents the live service and deploys the production build to GitHub Pages', () => {
+    const readme = projectFile('README.md');
+    const workflow = projectFile('.github/workflows/deploy-pages.yml');
+    expect(readme).toContain('https://esiivola.github.io/helsinki-parking/');
+    expect(workflow).toContain('npm ci');
+    expect(workflow).toContain('npm test');
+    expect(workflow).toContain('npm run build');
+    expect(workflow).toContain('actions/deploy-pages@v4');
+    expect(workflow).toContain('path: ./dist');
+  });
 });
