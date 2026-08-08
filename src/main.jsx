@@ -41,7 +41,7 @@ const copy = {
     perHour: '/ tunti', freeNow: 'Maksuton nyt', paidNow: 'Maksullinen nyt', nextFree: 'Maksuton klo 21 jälkeen', saturdayFree: 'Maksuton klo 18 jälkeen', allDayFree: 'Maksuton koko päivän',
     hours: 'Maksulliset ajat', weekdays: 'Ma–pe', saturday: 'Lauantai', sunday: 'Sunnuntai', signException: 'Paikkakohtainen voimassaolo', zone: 'Maksuvyöhyke', residentArea: 'Asukasvyöhyke', permit: 'Asukastunnus', estimatedSpaces: 'Arvioitu paikkamäärä',
     notices: 'Huomiot', closureActive: 'Työ tai tapahtuma alueella', closureBody: 'Lupa-alue leikkaa valitun pysäköintipaikan. Paikkoja voi olla tilapäisesti pois käytöstä.', removalActive: 'Siirtokehotus tämän paikan lähellä', removalBody: 'Kaupungin Siirtovahti näyttää siirtokehotuksen tällä katuosuudella.', removalPeriod: 'Voimassa', maintenanceUnavailable: 'Aura-ajoneuvojen live-syöte ei ole käytettävissä', maintenanceBody: 'Siirtokehotukset tarkistetaan kaupungin Siirtovahti-palvelusta. Kadulla oleva merkki ratkaisee.', officialRule: 'Palvelukartan virallinen kuvaus', officialRestriction: 'Pysäköinti kielletty', officialRestrictionHint: 'Virallinen rajoitus · tarkista liikennemerkki',
-    nearby: 'Pysäköintihallit lähellä', live: 'Ajantasainen', open: 'Avoinna', closed: 'Suljettu', statusUnknown: 'Aukioloaika ei tiedossa', spaces: 'paikkaa vapaana', totalSpaces: 'Paikkoja yhteensä', distance: 'Etäisyys', priceUnavailable: 'Hinta ei tiedossa', forecast: 'Arvio 2 tunnin kuluttua', facilitiesLoading: 'Haetaan pysäköintihalleja…', facilitiesEmpty: 'Lähistöltä ei löytynyt pysäköintihalleja.', openingHours: 'Aukioloajat', operator: 'Ylläpitäjä', officialSite: 'Tarkista hinnat ja aukioloajat',
+    nearby: 'Pysäköintihallit lähellä', parkingHall: 'Pysäköintihalli', live: 'Ajantasainen', open: 'Avoinna', closed: 'Suljettu', statusUnknown: 'Aukioloaika ei tiedossa', spaces: 'paikkaa vapaana', totalSpaces: 'Paikkoja yhteensä', priceUnavailable: 'Hinta ei tiedossa', forecast: 'Arvio 2 tunnin kuluttua', facilitiesLoading: 'Haetaan pysäköintihalleja…', facilitiesEmpty: 'Lähistöltä ei löytynyt pysäköintihalleja.', openingHours: 'Aukioloajat', operator: 'Ylläpitäjä', paymentMethods: 'Maksutavat', officialSite: 'Tarkista hinnat ja aukioloajat',
     sources: 'Tietolähteet', advisory: 'Liikennemerkki ratkaisee', disclaimer: 'Sivustolle kootut tiedot voivat olla vanhentuneita tai vääriä. Tarkista aina liikennemerkki ennen pysäköintiä',
     locate: 'Näytä sijaintini', refresh: 'Päivitä tiedot', close: 'Sulje', details: 'Tiedot', showList: 'Lähialueen hallit', dataUpdated: 'Tiedot päivitetty', dataUpdating: 'Päivitetään tietoja', spotCount: 'pysäköintipaikkaa kartalla', zoomIn: 'Lähennä karttaa nähdäksesi pysäköintipaikat', hour: 'Tunti', minute: 'Minuutti',
     permissions: 'Sijaintia ei voitu käyttää', privacy: 'Sijaintitietoa käsitellään vain selaimessasi.', more: 'Lisätiedot', cc: '© Helsingin kaupunki / HRI / Palvelukartta, CC BY 4.0 · © OpenStreetMap, ODbL',
@@ -56,7 +56,7 @@ const copy = {
     perHour: '/ hour', freeNow: 'Free now', paidNow: 'Paid now', nextFree: 'Free after 21:00', saturdayFree: 'Free after 18:00', allDayFree: 'Free all day',
     hours: 'Chargeable hours', weekdays: 'Mon–Fri', saturday: 'Saturday', sunday: 'Sunday', signException: 'Space-specific validity', zone: 'Payment zone', residentArea: 'Resident zone', permit: 'Resident permit', estimatedSpaces: 'Estimated capacity',
     notices: 'Advisories', closureActive: 'Works or event in this area', closureBody: 'The permit area overlaps the selected parking space. Spaces may be temporarily unavailable.', removalActive: 'Relocation notice near this space', removalBody: 'The City Siirtovahti service shows a relocation notice on this street section.', removalPeriod: 'Valid', maintenanceUnavailable: 'Live snow-plough positions are unavailable', maintenanceBody: 'Relocation notices are checked through the City Siirtovahti service. The street sign is final.', officialRule: 'Official Service Map description', officialRestriction: 'Parking prohibited', officialRestrictionHint: 'Official restriction · check the street sign',
-    nearby: 'Nearby parking facilities', live: 'Live', open: 'Open', closed: 'Closed', statusUnknown: 'Opening hours unavailable', spaces: 'spaces available', totalSpaces: 'Total spaces', distance: 'Distance', priceUnavailable: 'Price unavailable', forecast: 'Estimate in 2 hours', facilitiesLoading: 'Finding parking facilities…', facilitiesEmpty: 'No parking facilities were found nearby.', openingHours: 'Opening hours', operator: 'Operator', officialSite: 'Check prices and opening hours',
+    nearby: 'Nearby parking facilities', parkingHall: 'Parking facility', live: 'Live', open: 'Open', closed: 'Closed', statusUnknown: 'Opening hours unavailable', spaces: 'spaces available', totalSpaces: 'Total spaces', priceUnavailable: 'Price unavailable', forecast: 'Estimate in 2 hours', facilitiesLoading: 'Finding parking facilities…', facilitiesEmpty: 'No parking facilities were found nearby.', openingHours: 'Opening hours', operator: 'Operator', paymentMethods: 'Payment methods', officialSite: 'Check prices and opening hours',
     sources: 'Data sources', advisory: 'Street signs are final', disclaimer: 'Information collected on this site may be outdated or incorrect. Always check the traffic sign before parking.',
     locate: 'Show my location', refresh: 'Refresh data', close: 'Close', details: 'Details', showList: 'Nearby facilities', dataUpdated: 'Data updated', dataUpdating: 'Updating data', spotCount: 'spaces on map', zoomIn: 'Zoom in to see parking spaces', hour: 'Hour', minute: 'Minute',
     permissions: 'Location could not be used', privacy: 'Your location is processed only in this browser.', more: 'More information', cc: '© City of Helsinki / HRI / Service Map, CC BY 4.0 · © OpenStreetMap, ODbL',
@@ -128,6 +128,12 @@ function polygonRings(feature) {
   return [];
 }
 
+function ringPoints(feature) {
+  const points = [];
+  polygonRings(feature).forEach((ring) => ring.forEach((point) => points.push(point)));
+  return points;
+}
+
 function orientation(a, b, c) {
   const value = (b[1] - a[1]) * (c[0] - b[0]) - (b[0] - a[0]) * (c[1] - b[1]);
   if (Math.abs(value) < 1e-12) return 0;
@@ -148,7 +154,7 @@ function segmentsIntersect(a, b, c, d) {
 }
 
 function featureBounds(feature) {
-  return polygonRings(feature).flat().reduce(
+  return ringPoints(feature).reduce(
     (box, [x, y]) => [Math.min(box[0], x), Math.min(box[1], y), Math.max(box[2], x), Math.max(box[3], y)],
     [Infinity, Infinity, -Infinity, -Infinity],
   );
@@ -211,6 +217,80 @@ export function siirtovahtiFeatures(data) {
   });
 }
 
+const PAYMENT_METHOD_ORDER = ['aimo', 'easypark', 'eparking', 'moovy', 'parkman', 'autopay', 'app', 'card', 'cash', 'machine', 'online'];
+
+function orderedPaymentMethods(methods) {
+  const unique = new Set((methods || []).filter(Boolean));
+  return PAYMENT_METHOD_ORDER.filter((method) => unique.has(method));
+}
+
+export function paymentMethodsFromText(value) {
+  const text = String(value || '').toLowerCase();
+  if (!text) return [];
+  const methods = [];
+  const paymentPhrases = text.match(/(?:maksutav\w*|voi\s+maksaa|maksetaan|payment\s*methods?|pay\s+with|paid\s+with)[^.!?}]*/g) || [];
+  const appPhrases = text.match(/[^.!?]*(?:sovelluks\w*|mobile\s*app|payment\s*app)[^.!?]*/g) || [];
+  const brandedText = [...paymentPhrases, ...appPhrases].join(' ');
+  if (/\baimo(?:\s*park)?\b/.test(brandedText)) methods.push('aimo');
+  if (/\beasy\s*park\b/.test(brandedText)) methods.push('easypark');
+  if (/\be\s*parking\b|\beparking\b/.test(brandedText)) methods.push('eparking');
+  if (/\bmoovy\b/.test(brandedText)) methods.push('moovy');
+  if (/\bpark\s*man\b/.test(brandedText)) methods.push('parkman');
+  if (/\bauto\s*pay\b/.test(brandedText)) methods.push('autopay');
+  if (/mobiili(?:sovellus|maksu)|mobile\s*(?:app|payment)|payment\s*app/.test(text)) methods.push('app');
+  if (/maksukort|luottokort|pankkikort|credit\s*card|debit\s*card|contactless/.test(text)) methods.push('card');
+  if (/käteis|\bcash\b|\bcoins?\b|\bnotes?\b/.test(text)) methods.push('cash');
+  if (/pysäköintiautomaat|maksuautomaat|parking\s*meter|pay\s*station/.test(text)) methods.push('machine');
+  if (/\bverkossa\b|\bonline\b/.test(text)) methods.push('online');
+  return orderedPaymentMethods(methods);
+}
+
+function paymentMethodsFromOsm(tags) {
+  const accepted = (key) => /^(?:yes|true|1|only|accepted)$/i.test(String(tags[key] || ''));
+  const methods = [];
+  const apps = [
+    ['aimo', ['payment:aimo', 'payment:aimopark']],
+    ['easypark', ['payment:easypark']],
+    ['eparking', ['payment:eparking']],
+    ['moovy', ['payment:moovy']],
+    ['parkman', ['payment:parkman']],
+    ['autopay', ['payment:autopay']],
+  ];
+  apps.forEach(([method, keys]) => { if (keys.some(accepted)) methods.push(method); });
+  if (accepted('payment:app') || accepted('payment:mobile_app')) methods.push('app');
+  if (['payment:cards', 'payment:credit_cards', 'payment:debit_cards', 'payment:contactless'].some(accepted)) methods.push('card');
+  if (['payment:cash', 'payment:coins', 'payment:notes'].some(accepted)) methods.push('cash');
+  return orderedPaymentMethods(methods);
+}
+
+function joinAlternatives(items, conjunction) {
+  if (items.length <= 1) return items[0] || '';
+  if (items.length === 2) return `${items[0]} ${conjunction} ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} ${conjunction} ${items[items.length - 1]}`;
+}
+
+export function formatPaymentMethods(methods, lang = 'fi') {
+  const ordered = orderedPaymentMethods(methods);
+  if (!ordered.length) return '';
+  const brandNames = { aimo: 'Aimo', easypark: 'EasyPark', eparking: 'eParking', moovy: 'Moovy', parkman: 'ParkMan', autopay: 'Autopay' };
+  const brands = ordered.filter((method) => brandNames[method]).map((method) => brandNames[method]);
+  const remaining = ordered.filter((method) => !brandNames[method]);
+  if (lang === 'fi') {
+    const parts = [];
+    if (brands.length === 1) parts.push(`${brands[0]}-sovelluksella`);
+    else if (brands.length === 2) parts.push(`${brands[0]}- ja ${brands[1]}-sovelluksilla`);
+    else if (brands.length > 2) parts.push(`${brands.slice(0, -1).map((name) => `${name}-`).join(', ')} ja ${brands[brands.length - 1]}-sovelluksilla`);
+    const labels = { app: 'mobiilisovelluksella', card: 'maksukortilla', cash: 'käteisellä', machine: 'pysäköintiautomaatilla', online: 'verkossa' };
+    remaining.forEach((method) => { if (labels[method]) parts.push(labels[method]); });
+    return `Pysäköinnin voi maksaa ${joinAlternatives(parts, 'tai')}.`;
+  }
+  const parts = [];
+  if (brands.length) parts.push(brands.length === 1 ? `the ${brands[0]} app` : `${joinAlternatives(brands, 'or')} apps`);
+  const labels = { app: 'a mobile app', card: 'a payment card', cash: 'cash', machine: 'a payment machine', online: 'online' };
+  remaining.forEach((method) => { if (labels[method]) parts.push(labels[method]); });
+  return `Parking can be paid with ${joinAlternatives(parts, 'or')}.`;
+}
+
 export function osmFacilities(data, origin) {
   const blockedAccess = new Set(['private', 'no', 'permit']);
   return (data?.elements || []).map((element) => {
@@ -231,6 +311,7 @@ export function osmFacilities(data, origin) {
       operator: tags.operator || tags.brand || '',
       website: tags.website || tags.url || '',
       openingHours: tags.opening_hours || '',
+      paymentMethods: paymentMethodsFromOsm(tags),
       source: 'osm',
     };
   }).filter((facility) => facility && facility.distance < 8000).sort((a, b) => a.distance - b.distance);
@@ -256,6 +337,7 @@ export function serviceMapFacilities(data, origin, lang = 'fi') {
       price: null,
       operator: unit.organizer_name || '',
       website: unit.www?.[lang] || unit.www?.fi || unit.www?.en || '',
+      paymentMethods: paymentMethodsFromText(description),
       source: 'service-map',
     };
   }).filter((facility) => facility && facility.distance < 8000).sort((a, b) => a.distance - b.distance);
@@ -276,6 +358,7 @@ export function mergeFacilities(primary, fallback, limit = 30) {
       if (!match.operator && candidate.operator) match.operator = candidate.operator;
       if (!match.capacity && candidate.capacity) match.capacity = candidate.capacity;
       if (!match.openingHours && candidate.openingHours) match.openingHours = candidate.openingHours;
+      match.paymentMethods = orderedPaymentMethods([...(match.paymentMethods || []), ...(candidate.paymentMethods || [])]);
     } else merged.push(candidate);
   }
   return merged.sort((a, b) => a.distance - b.distance).slice(0, limit);
@@ -285,10 +368,12 @@ function parseTimeRanges(value) {
   const ranges = [];
   const normalized = String(value || '').replace(/(\d{1,2})\s*\.\s*(\d{1,2})/g, '$1-$2');
   const pattern = /(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?/g;
-  for (const match of normalized.matchAll(pattern)) {
+  let match = pattern.exec(normalized);
+  while (match) {
     const start = Number(match[1]) * 60 + Number(match[2] || 0);
     const end = Number(match[3]) * 60 + Number(match[4] || 0);
     if (start >= 0 && start < 1440 && end > 0 && end <= 1440) ranges.push({ start, end });
+    match = pattern.exec(normalized);
   }
   return ranges;
 }
@@ -498,7 +583,7 @@ function closureTimes(feature) {
 
 function featureNearNotice(feature, notice, threshold = 40) {
   const center = geometryCenter(feature);
-  const points = [...polygonRings(feature).flat()];
+  const points = ringPoints(feature);
   if (center) points.push([center[1], center[0]]);
   return points.some((point) => pointToLineDistance(point, notice) <= threshold);
 }
@@ -622,16 +707,48 @@ function wfsUrl(layer, { bounds, count = 5000 } = {}) {
 }
 
 async function jsonWithTimeout(url, ms = 12000, signal, options = {}) {
-  const controller = new AbortController();
+  const controller = createAbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   if (signal) signal.addEventListener('abort', () => controller.abort(), { once: true });
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal, headers: { Accept: 'application/json', ...(options.headers || {}) } });
+    const request = { ...options, headers: { Accept: 'application/json', ...(options.headers || {}) } };
+    if (controller.requestSignal) request.signal = controller.requestSignal;
+    const response = await fetch(url, request);
     if (!response.ok) throw new Error(`${response.status}`);
     return await response.json();
   } finally {
     clearTimeout(timer);
   }
+}
+
+function createAbortController() {
+  const Controller = typeof AbortController === 'function' ? AbortController : null;
+  if (Controller) {
+    const controller = new Controller();
+    return { signal: controller.signal, requestSignal: controller.signal, abort: () => controller.abort() };
+  }
+  let aborted = false;
+  const listeners = [];
+  const signal = {
+    get aborted() { return aborted; },
+    addEventListener(type, listener) { if (type === 'abort' && typeof listener === 'function') listeners.push(listener); },
+  };
+  return {
+    signal,
+    requestSignal: null,
+    abort() {
+      if (aborted) return;
+      aborted = true;
+      listeners.forEach((listener) => listener());
+    },
+  };
+}
+
+function settleAll(promises) {
+  return Promise.all(promises.map((promise) => Promise.resolve(promise).then(
+    (value) => ({ status: 'fulfilled', value }),
+    (reason) => ({ status: 'rejected', reason }),
+  )));
 }
 
 function overpassUrl([lat, lon]) {
@@ -640,19 +757,21 @@ function overpassUrl([lat, lon]) {
 }
 
 function geometryCenter(feature) {
-  const bbox = feature?.geometry?.bbox || feature?.geometry?.coordinates?.flat(4).reduce((box, value, index, arr) => {
-    if (typeof value !== 'number') return box;
-    const isLon = index % 2 === 0;
-    if (isLon) { box[0] = Math.min(box[0], value); box[2] = Math.max(box[2], value); }
-    else { box[1] = Math.min(box[1], value); box[3] = Math.max(box[3], value); }
-    return box;
-  }, [Infinity, Infinity, -Infinity, -Infinity]);
+  const supplied = feature?.geometry?.bbox;
+  const box = [Infinity, Infinity, -Infinity, -Infinity];
+  const collect = (value) => {
+    if (!Array.isArray(value)) return;
+    if (Number.isFinite(value[0]) && Number.isFinite(value[1])) {
+      box[0] = Math.min(box[0], value[0]); box[1] = Math.min(box[1], value[1]);
+      box[2] = Math.max(box[2], value[0]); box[3] = Math.max(box[3], value[1]);
+      return;
+    }
+    value.forEach(collect);
+  };
+  if (!supplied) collect(feature?.geometry?.coordinates);
+  const bbox = supplied || box;
   if (!bbox || !bbox.every(Number.isFinite)) return null;
   return [(bbox[1] + bbox[3]) / 2, (bbox[0] + bbox[2]) / 2];
-}
-
-function formatDistance(meters) {
-  return meters < 1000 ? `${Math.round(meters / 10) * 10} m` : `${(meters / 1000).toFixed(1).replace('.', ',')} km`;
 }
 
 function parsePrice(detail, lang) {
@@ -676,7 +795,8 @@ export function compactFacilityPrice(price) {
 }
 
 export function hasOfficialParkingRestriction(serviceMap) {
-  const description = Object.values(serviceMap?.name || {}).filter(Boolean).join(' ');
+  const names = serviceMap?.name || {};
+  const description = Object.keys(names).map((key) => names[key]).filter(Boolean).join(' ');
   return /pysäköintikiel|pysäköinti\s+kielletty|pysäyttäminen\s+kielletty|parking\s+(?:is\s+)?prohibited|no\s+parking|stopping\s+prohibited/i.test(description);
 }
 
@@ -690,6 +810,17 @@ export function shouldShowFacilityMarker(facility, zoom, streetLayerEnabled = tr
 
 export function visibleFacilityMarkers(facilities, zoom, streetLayerEnabled = true) {
   return facilities.filter((facility) => shouldShowFacilityMarker(facility, zoom, streetLayerEnabled));
+}
+
+export function parkingPolygonStyle(status) {
+  const color = { freeLong: '#72bf98', freeShort: '#b6ddcf', paid: '#e3a456', unavailable: '#db7d74' }[status] || '#b9bdb9';
+  return {
+    color,
+    weight: status === 'freeShort' ? 1.7 : 1.3,
+    fillColor: color,
+    fillOpacity: 0.5,
+    dashArray: status === 'freeShort' ? '4 3' : null,
+  };
 }
 
 function formatExceptionPeriod(exception, lang) {
@@ -801,11 +932,12 @@ function FacilityPanel({ facility, lang, onClose }) {
           : statusKnown ? status : facility.openingHours || '';
   const priceState = facility.openNow === false ? 'unavailable' : /maksuton|free/i.test(compactPrice || '') ? 'free' : 'neutral';
   const showPredictedDetail = predictedSpaces !== null && liveSpaces !== null;
+  const paymentText = formatPaymentMethods(facility.paymentMethods, lang);
   const hasDetails = showPredictedDetail || Number.isFinite(facility.capacity) || (facility.price && facility.price !== compactPrice) || facility.openingHours || facility.operator;
   return (
     <section className="place-card facility-card">
       <button className="panel-close" onClick={onClose} aria-label={t.close}><X size={17} /></button>
-      <div className="eyebrow"><Building2 size={14} /> {formatDistance(facility.distance)}</div>
+      <div className="eyebrow"><Building2 size={14} /> {t.parkingHall}</div>
       <h2 className="facility-name">{facility.name}</h2>
       <div className={`parking-summary facility ${priceState}`}>
         <h2>{headline}</h2>
@@ -818,6 +950,7 @@ function FacilityPanel({ facility, lang, onClose }) {
         {facility.operator && <div><span>{t.operator}</span><strong>{facility.operator}</strong></div>}
         {facility.price && facility.price !== compactPrice && <div><span>{t.details}</span><strong>{facility.price}</strong></div>}
       </div>}
+      {paymentText && <p className="facility-payment-methods">{paymentText}</p>}
       {facility.website && <a className="facility-website" href={facility.website} target="_blank" rel="noreferrer">{t.officialSite}<ExternalLink size={14} /></a>}
     </section>
   );
@@ -935,7 +1068,7 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.allSettled([
+    settleAll([
       jsonWithTimeout(wfsUrl('Pysakoinnin_maksuvyohykkeet_alue', { count: 20 })),
       jsonWithTimeout(wfsUrl('Asukas_ja_yrityspysakointivyohykkeet_alue', { count: 40 })),
       jsonWithTimeout(wfsUrl('Winkki_works', { count: 1000 })),
@@ -959,7 +1092,7 @@ function App() {
   const loadRemovalNotices = useCallback(async () => {
     if (removalLoaded.current) return;
     removalAbort.current?.abort();
-    const controller = new AbortController();
+    const controller = createAbortController();
     removalAbort.current = controller;
     const now = new Date();
     const horizon = new Date(now.getTime() + 7 * 86400000);
@@ -991,7 +1124,7 @@ function App() {
     parkingAbort.current?.abort();
     if (!layers.street) { setSpotStatus('ready'); setSpots([]); return; }
     if (!shouldLoadParkingSpots(map.getZoom())) { setSpotStatus('zoom'); setSpots([]); return; }
-    const controller = new AbortController();
+    const controller = createAbortController();
     parkingAbort.current = controller;
     setSpotStatus('loading');
     try {
@@ -1042,9 +1175,7 @@ function App() {
     };
     L.geoJSON(spots, {
       style: (f) => {
-        const palette = { freeLong: ['#23745a', '#72bf98'], freeShort: ['#438d79', '#b6ddcf'], paid: ['#a96b1f', '#e3a456'], unavailable: ['#aa473d', '#db7d74'] };
-        const [stroke, fill] = palette[stateFor(f).status];
-        return { color: stroke, weight: stateFor(f).status === 'freeShort' ? 1.7 : 1.3, fillColor: fill, fillOpacity: 0.5, dashArray: stateFor(f).status === 'freeShort' ? '4 3' : null };
+        return parkingPolygonStyle(stateFor(f).status);
       },
       onEachFeature: (feature, layer) => {
         const state = stateFor(feature);
@@ -1056,7 +1187,7 @@ function App() {
         }
         layer.on('click', (e) => { L.DomEvent.stopPropagation(e); analyzePoint(e.latlng, feature); });
         layer.on('mouseover', () => layer.setStyle({ weight: 2.2, fillOpacity: 0.62 }));
-        layer.on('mouseout', () => layer.setStyle({ weight: 1.2, fillOpacity: 0.48 }));
+        layer.on('mouseout', () => layer.setStyle(parkingPolygonStyle(state.status)));
       },
     }).addTo(group);
   }, [spots, layers.street, lang, analyzePoint, t.street, parkingTime, mapData.zones, mapData.closures, removalNotices]);
@@ -1064,7 +1195,7 @@ function App() {
   useEffect(() => {
     const originId = selected?.feature?.properties?.id;
     if (!originId) { setServiceMap(null); return; }
-    const controller = new AbortController();
+    const controller = createAbortController();
     setServiceMap(null);
     const query = new URLSearchParams({ type: 'parking_area', municipality: 'helsinki', origin_id: String(originId), geometry: 'false', page_size: '1' });
     jsonWithTimeout(`${SERVICE_MAP}?${query}`, 8000, controller.signal)
@@ -1101,7 +1232,7 @@ function App() {
         const center = geometryCenter(feature);
         const carCapacity = feature.properties?.builtCapacity?.CAR;
         if (!center || !carCapacity) return null;
-        return { id: feature.id, name: feature.properties?.name?.[lang] || feature.properties?.name?.fi || 'Pysäköinti', point: center, distance: haversine(origin, center), status: feature.properties?.status, spacesAvailable: null, openNow: null, capacity: carCapacity, price: null, source: 'liipi' };
+        return { id: feature.id, name: feature.properties?.name?.[lang] || feature.properties?.name?.fi || 'Pysäköinti', point: center, distance: haversine(origin, center), status: feature.properties?.status, spacesAvailable: null, openNow: null, capacity: carCapacity, price: null, paymentMethods: [], source: 'liipi' };
       }).filter((facility) => facility && facility.distance < 18000).sort((a, b) => a.distance - b.distance).slice(0, 30);
       if (nearest.length) setFacilities(nearest);
       const util = await jsonWithTimeout(`${LIIPI}/utilizations`, 14000).catch(() => []);
@@ -1129,6 +1260,7 @@ function App() {
             openNow: detail?.openingHours?.openNow ?? facility.openNow,
             openingHours: detail?.openingHours?.info?.[lang] || detail?.openingHours?.info?.fi || '',
             website: detail?.openingHours?.url || detail?.paymentInfo?.url || '',
+            paymentMethods: paymentMethodsFromText(JSON.stringify(detail?.paymentInfo || {})),
             predictedSpaces: predicted?.spacesAvailable,
           };
         } catch { return facility; }
@@ -1334,7 +1466,8 @@ const clarityStyles = `
   .parking-summary.neutral{color:#2457d6}
    .facility-name{margin-top:13px;font-size:var(--type-label);line-height:1.3}
    .parking-summary.facility{margin-top:13px}
-   .facility-website{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:0 1px;border-top:1px solid var(--line);color:#2457d6;font-size:var(--type-body);font-weight:750;text-decoration:none}.facility-website:hover,.facility-website:focus-visible{text-decoration:underline;outline:0}.facility-website svg{flex:0 0 auto}
+    .facility-payment-methods{margin:12px 0 0;padding-top:12px;border-top:1px solid var(--line);color:#4e5851;font-size:var(--type-body);line-height:1.45}
+    .facility-website{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:0 1px;border-top:1px solid var(--line);color:#2457d6;font-size:var(--type-body);font-weight:750;text-decoration:none}.facility-website:hover,.facility-website:focus-visible{text-decoration:underline;outline:0}.facility-website svg{flex:0 0 auto}
   .card-key-facts{display:flex;margin:16px 0 0;padding:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .card-key-facts>div{min-width:0;flex:1;padding:11px 12px 10px 0}
   .card-key-facts>div+div{padding-left:12px;border-left:1px solid var(--line)}

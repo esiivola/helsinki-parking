@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, featuresOverlap, formatParkingCardTransition, formatParkingValidity, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers } from './main.jsx';
+import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingPolygonStyle, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers } from './main.jsx';
 
 describe('parking map helpers', () => {
   it('detects a point inside a GeoJSON polygon', () => {
@@ -236,6 +236,47 @@ describe('parking map helpers', () => {
     expect(merged[0].website).toBe('https://example.test/');
   });
 
+  it('shows only payment methods explicitly provided by the source', () => {
+    const origin = [60.17, 24.94];
+    const osm = osmFacilities({ elements: [{
+      type: 'node', id: 1, lat: 60.1702, lon: 24.9402,
+      tags: { name: 'P-WTC', 'payment:app': 'yes', 'payment:contactless': 'yes', 'payment:coins': 'yes' },
+    }] }, origin);
+    expect(osm[0].paymentMethods).toEqual(['app', 'card', 'cash']);
+    expect(formatPaymentMethods(osm[0].paymentMethods, 'fi')).toBe('Pysäköinnin voi maksaa mobiilisovelluksella, maksukortilla tai käteisellä.');
+
+    const serviceMap = serviceMapFacilities({ results: [{
+      id: 2,
+      name: { fi: 'Marketparkki' },
+      short_description: { fi: 'Pysäköinnin maksutavat: Moovy-sovellus ja maksukortti.' },
+      location: { coordinates: [24.941, 60.171] },
+    }] }, origin, 'fi');
+    expect(serviceMap[0].paymentMethods).toEqual(['moovy', 'card']);
+    expect(formatPaymentMethods(serviceMap[0].paymentMethods, 'fi')).toBe('Pysäköinnin voi maksaa Moovy-sovelluksella tai maksukortilla.');
+
+    const operatorOnly = serviceMapFacilities({ results: [{
+      id: 3,
+      name: { fi: 'Aimo Park -halli' },
+      short_description: { fi: 'Hallin ylläpitäjä on Aimo Park.' },
+      location: { coordinates: [24.942, 60.172] },
+    }] }, origin, 'fi');
+    expect(operatorOnly[0].paymentMethods).toEqual([]);
+  });
+
+  it('merges explicitly sourced payment methods without duplicates', () => {
+    const primary = [{ id: 1, name: 'Kluuvi', point: [60.17, 24.94], distance: 10, paymentMethods: ['card'], source: 'service-map' }];
+    const fallback = [{ id: 2, name: 'P-Kluuvi', point: [60.1701, 24.9401], distance: 15, paymentMethods: ['app', 'card'], source: 'osm' }];
+    expect(mergeFacilities(primary, fallback)[0].paymentMethods).toEqual(['app', 'card']);
+  });
+
+  it('uses the fill colour for polygon outlines', () => {
+    ['freeLong', 'freeShort', 'paid', 'unavailable'].forEach((status) => {
+      const style = parkingPolygonStyle(status);
+      expect(style.color).toBe(style.fillColor);
+    });
+    expect(parkingPolygonStyle('freeShort').dashArray).toBe('4 3');
+  });
+
   it('keeps nearby parking halls with different names separate', () => {
     const liipi = [{ id: 1, name: 'Kluuvi', point: [60.17, 24.94], distance: 10, source: 'liipi' }];
     const osm = [{ id: 'osm-2', name: 'Asema', point: [60.1703, 24.9403], distance: 35, source: 'osm' }];
@@ -313,8 +354,19 @@ describe('static search metadata', () => {
     expect(source).not.toContain('Kadunvarsipaikkojen tilanne');
   });
 
-  it('builds for maintained Android Firefox versions', () => {
-    expect(projectFile('vite.config.js')).toContain("target: ['es2019', 'firefox91']");
+  it('avoids browser APIs that previously prevented older Safari and Firefox from loading', () => {
+    const source = projectFile('src/main.jsx');
+    expect(projectFile('vite.config.js')).toContain("target: ['es2017', 'safari11', 'firefox68']");
+    expect(source).not.toContain('.matchAll(');
+    expect(source).not.toContain('.flat(');
+    expect(source).not.toContain('Promise.allSettled(');
+    expect(source).not.toContain('new AbortController(');
+  });
+
+  it('does not show distances in parking-hall cards', () => {
+    const source = projectFile('src/main.jsx');
+    expect(source).not.toContain('formatDistance(facility.distance)');
+    expect(source).not.toContain("distance: 'Etäisyys'");
   });
 
   it('documents the live service and deploys the production build to GitHub Pages', () => {

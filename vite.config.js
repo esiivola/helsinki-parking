@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
-    target: ['es2019', 'firefox91'],
+    target: ['es2017', 'safari11', 'firefox68'],
   },
   server: {
     proxy: {
