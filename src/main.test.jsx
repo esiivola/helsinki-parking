@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingPolygonStyle, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers } from './main.jsx';
+import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, facilityAreaKey, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingPolygonStyle, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, readJsonCache, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldReuseParkingSpotCache, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers, writeJsonCache } from './main.jsx';
 
 describe('parking map helpers', () => {
   it('detects a point inside a GeoJSON polygon', () => {
@@ -318,6 +318,31 @@ describe('parking map helpers', () => {
     expect(visibleFacilityMarkers(facilities, 16, false)).toHaveLength(0);
     expect(visibleFacilityMarkers(facilities, 16, true)).toHaveLength(12);
   });
+
+  it('reuses street polygons while the viewport remains inside a recent padded request', () => {
+    const cache = {
+      bounds: { west: 24.90, south: 60.15, east: 24.98, north: 60.20 },
+      fetchedAt: 1_000,
+      features: [{ id: 1 }],
+    };
+    expect(shouldReuseParkingSpotCache(cache, { west: 24.92, south: 60.16, east: 24.96, north: 60.19 }, 120_000)).toBe(true);
+    expect(shouldReuseParkingSpotCache(cache, { west: 24.89, south: 60.16, east: 24.96, north: 60.19 }, 120_000)).toBe(false);
+    expect(shouldReuseParkingSpotCache(cache, { west: 24.92, south: 60.16, east: 24.96, north: 60.19 }, 400_000)).toBe(false);
+  });
+
+  it('groups nearby origins into one parking-hall query area', () => {
+    expect(facilityAreaKey([60.1699, 24.9384])).toBe(facilityAreaKey([60.171, 24.941]));
+    expect(facilityAreaKey([60.1699, 24.9384])).not.toBe(facilityAreaKey([60.23, 25.02]));
+  });
+
+  it('uses expiring browser caches and ignores malformed entries', () => {
+    const values = new Map();
+    const storage = { getItem: (key) => values.get(key) || null, setItem: (key, value) => values.set(key, value) };
+    expect(writeJsonCache(storage, 'test', { value: 7 }, 1_000)).toBe(true);
+    expect(readJsonCache(storage, 'test', 5_000, 5_500)).toEqual({ value: 7 });
+    expect(readJsonCache(storage, 'test', 5_000, 6_001)).toBeNull();
+    expect(readJsonCache({ getItem: () => '{' }, 'broken', 5_000, 2_000)).toBeNull();
+  });
 });
 
 describe('static search metadata', () => {
@@ -343,6 +368,19 @@ describe('static search metadata', () => {
     const source = projectFile('src/main.jsx');
     expect(source).toContain("light_all/{z}/{x}/{y}.png");
     expect(source).not.toContain("light_all/{z}/{x}/{y}{r}.png");
+  });
+
+  it('uses native system fonts without an extra font-network request', () => {
+    const source = projectFile('src/main.jsx');
+    expect(source).not.toContain('fonts.googleapis.com');
+    expect(source).not.toContain('fonts.gstatic.com');
+  });
+
+  it('does not fan out development-only parking-facility requests', () => {
+    const source = projectFile('src/main.jsx');
+    expect(source).not.toContain('/facilities.geojson?limit=-1');
+    expect(source).not.toContain('/prediction?after=120');
+    expect(source).not.toContain('/utilizations');
   });
 
   it('uses natural Finnish wording and omits unreliable street occupancy', () => {

@@ -20,7 +20,6 @@ import {
 
 const HELSINKI = [60.16986, 24.93838];
 const WFS = 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs';
-const LIIPI = '/api/fintraffic/api/v1';
 const SIIRTOVAHTI = 'https://liikenne-elastic-proxy.api.hel.ninja/mobilenote_data/_search';
 const SERVICE_MAP = 'https://api.hel.fi/servicemap/v2/administrative_division/';
 const SERVICE_MAP_FACILITIES = 'https://api.hel.fi/servicemap/v2/unit/?service=537&municipality=helsinki&page_size=200';
@@ -29,6 +28,43 @@ const MIN_PARKING_ZOOM = 16;
 export const DEFAULT_MAP_ZOOM = MIN_PARKING_ZOOM;
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, value) => String(value).padStart(2, '0'));
 const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, value) => String(value * 5).padStart(2, '0'));
+const CACHE_PREFIX = 'helsinki-parking:v3:';
+const PARKING_SPOT_CACHE_MS = 5 * 60 * 1000;
+const pendingJsonRequests = new Map();
+
+export function writeJsonCache(storage, key, value, now = Date.now()) {
+  if (!storage) return false;
+  try {
+    storage.setItem(`${CACHE_PREFIX}${key}`, JSON.stringify({ savedAt: now, value }));
+    return true;
+  } catch { return false; }
+}
+
+export function readJsonCache(storage, key, maxAge, now = Date.now()) {
+  if (!storage) return null;
+  try {
+    const cached = JSON.parse(storage.getItem(`${CACHE_PREFIX}${key}`) || 'null');
+    if (!cached || !Number.isFinite(cached.savedAt) || now - cached.savedAt > maxAge) return null;
+    return cached.value;
+  } catch { return null; }
+}
+
+function browserStorage() {
+  try { return typeof window !== 'undefined' ? window.localStorage : null; } catch { return null; }
+}
+
+export function facilityAreaKey([latitude, longitude]) {
+  return `${latitude.toFixed(2)}:${longitude.toFixed(2)}`;
+}
+
+function plainBounds(bounds) {
+  return { west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() };
+}
+
+export function shouldReuseParkingSpotCache(cache, bounds, now = Date.now()) {
+  if (!cache?.bounds || !Array.isArray(cache.features) || now - cache.fetchedAt > PARKING_SPOT_CACHE_MS) return false;
+  return bounds.west >= cache.bounds.west && bounds.south >= cache.bounds.south && bounds.east <= cache.bounds.east && bounds.north <= cache.bounds.north;
+}
 
 const copy = {
   fi: {
@@ -721,6 +757,17 @@ async function jsonWithTimeout(url, ms = 12000, signal, options = {}) {
   }
 }
 
+async function cachedJson(key, url, maxAge, ms = 12000) {
+  const cached = readJsonCache(browserStorage(), key, maxAge);
+  if (cached !== null) return cached;
+  if (pendingJsonRequests.has(key)) return pendingJsonRequests.get(key);
+  const request = jsonWithTimeout(url, ms)
+    .then((data) => { writeJsonCache(browserStorage(), key, data); return data; })
+    .finally(() => pendingJsonRequests.delete(key));
+  pendingJsonRequests.set(key, request);
+  return request;
+}
+
 function createAbortController() {
   const Controller = typeof AbortController === 'function' ? AbortController : null;
   if (Controller) {
@@ -772,15 +819,6 @@ function geometryCenter(feature) {
   const bbox = supplied || box;
   if (!bbox || !bbox.every(Number.isFinite)) return null;
   return [(bbox[1] + bbox[3]) / 2, (bbox[0] + bbox[2]) / 2];
-}
-
-function parsePrice(detail, lang) {
-  const rows = detail?.pricing?.filter((row) => row.capacityType === 'CAR') || [];
-  const first = rows.find((row) => row.price?.[lang]) || rows.find((row) => row.price?.fi) || rows[0];
-  const text = first?.price?.[lang] || first?.price?.fi || first?.price?.en;
-  if (text) return text.replace(/EUR/gi, '€').replace(/\/H\b/gi, '/h');
-  if (first && first.price === null) return lang === 'fi' ? 'Maksuton' : 'Free';
-  return null;
 }
 
 export function compactFacilityPrice(price) {
@@ -966,8 +1004,10 @@ function App() {
   const layersRef = useRef({ zones: null, residents: null, spots: null, closures: null, facilities: null });
   const dataRef = useRef({ zones: [], residents: [], spots: [], closures: [] });
   const parkingAbort = useRef(null);
+  const parkingCache = useRef(null);
   const removalAbort = useRef(null);
   const removalLoaded = useRef(false);
+  const serviceMapCache = useRef(new Map());
   const [location, setLocation] = useState({ point: HELSINKI, state: 'fallback', message: null });
   const [parkingTime, setParkingTime] = useState(() => ceilToFiveMinutes());
   const [mapZoom, setMapZoom] = useState(DEFAULT_MAP_ZOOM);
@@ -1068,29 +1108,43 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    settleAll([
-      jsonWithTimeout(wfsUrl('Pysakoinnin_maksuvyohykkeet_alue', { count: 20 })),
-      jsonWithTimeout(wfsUrl('Asukas_ja_yrityspysakointivyohykkeet_alue', { count: 40 })),
-      jsonWithTimeout(wfsUrl('Winkki_works', { count: 1000 })),
-      jsonWithTimeout(wfsUrl('Winkki_rents_audiences', { count: 1200 })),
-    ]).then((results) => {
-      if (cancelled) return;
-      const values = results.map((r) => (r.status === 'fulfilled' ? r.value.features || [] : []));
-      const today = new Date().toISOString().slice(0, 10);
-      const closures = [...values[2], ...values[3]].filter((f) => {
-        const p = f.properties || {};
-        const end = String(p.event_enddate || p.licence_enddate || '').slice(0, 10);
-        return (!end || end >= today) && p.licence_status !== 'CANCELLED';
+    cachedJson('payment-zones', wfsUrl('Pysakoinnin_maksuvyohykkeet_alue', { count: 20 }), 24 * 60 * 60 * 1000)
+      .then((data) => { if (!cancelled) setMapData((current) => ({ ...current, zones: data.features || [] })); })
+      .catch(() => {});
+    const deferred = setTimeout(async () => {
+      const closuresFromCache = readJsonCache(browserStorage(), 'active-closures', 10 * 60 * 1000);
+      const residentsPromise = cachedJson('resident-zones', wfsUrl('Asukas_ja_yrityspysakointivyohykkeet_alue', { count: 40 }), 24 * 60 * 60 * 1000)
+        .then((data) => data.features || []).catch(() => []);
+      const closuresPromise = closuresFromCache ? Promise.resolve(closuresFromCache) : settleAll([
+        jsonWithTimeout(wfsUrl('Winkki_works', { count: 1000 })),
+        jsonWithTimeout(wfsUrl('Winkki_rents_audiences', { count: 1200 })),
+      ]).then((results) => {
+        const today = new Date().toISOString().slice(0, 10);
+        const features = results.reduce((all, result) => all.concat(result.status === 'fulfilled' ? result.value.features || [] : []), []);
+        const active = features.filter((feature) => {
+          const properties = feature.properties || {};
+          const end = String(properties.event_enddate || properties.licence_enddate || '').slice(0, 10);
+          return (!end || end >= today) && properties.licence_status !== 'CANCELLED';
+        });
+        writeJsonCache(browserStorage(), 'active-closures', active);
+        return active;
       });
-      setMapData({ zones: values[0], residents: values[1], closures });
-    });
-    return () => { cancelled = true; };
+      const [residents, closures] = await Promise.all([residentsPromise, closuresPromise]);
+      if (!cancelled) setMapData((current) => ({ ...current, residents, closures }));
+    }, 900);
+    return () => { cancelled = true; clearTimeout(deferred); };
   }, []);
 
   useEffect(() => { dataRef.current = { ...dataRef.current, ...mapData, spots }; }, [mapData, spots]);
 
   const loadRemovalNotices = useCallback(async () => {
     if (removalLoaded.current) return;
+    const cached = readJsonCache(browserStorage(), 'removal-notices', 5 * 60 * 1000);
+    if (Array.isArray(cached)) {
+      setRemovalNotices(cached);
+      removalLoaded.current = true;
+      return;
+    }
     removalAbort.current?.abort();
     const controller = createAbortController();
     removalAbort.current = controller;
@@ -1105,31 +1159,45 @@ function App() {
     try {
       const data = await jsonWithTimeout(SIIRTOVAHTI, 14000, controller.signal, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!controller.signal.aborted) {
-        setRemovalNotices(siirtovahtiFeatures(data));
+        const features = siirtovahtiFeatures(data);
+        setRemovalNotices(features);
+        writeJsonCache(browserStorage(), 'removal-notices', features);
         removalLoaded.current = true;
       }
     } catch { if (!controller.signal.aborted) setRemovalNotices([]); }
   }, []);
 
-  const needsRemovalData = shouldLoadParkingSpots(mapZoom) && layers.street;
+  const needsRemovalData = shouldLoadParkingSpots(mapZoom) && layers.street && spotStatus === 'ready';
   useEffect(() => {
     if (!needsRemovalData) { removalAbort.current?.abort(); return undefined; }
-    loadRemovalNotices();
-    return () => removalAbort.current?.abort();
+    const timer = setTimeout(loadRemovalNotices, 1200);
+    return () => { clearTimeout(timer); removalAbort.current?.abort(); };
   }, [needsRemovalData, loadRemovalNotices]);
 
   const loadSpots = useCallback(async () => {
     const map = mapRef.current;
     if (!map) return;
-    parkingAbort.current?.abort();
     if (!layers.street) { setSpotStatus('ready'); setSpots([]); return; }
     if (!shouldLoadParkingSpots(map.getZoom())) { setSpotStatus('zoom'); setSpots([]); return; }
+    const viewport = plainBounds(map.getBounds());
+    if (shouldReuseParkingSpotCache(parkingCache.current, viewport)) {
+      setSpots(parkingCache.current.features);
+      setSpotStatus('ready');
+      return;
+    }
+    parkingAbort.current?.abort();
     const controller = createAbortController();
     parkingAbort.current = controller;
     setSpotStatus('loading');
     try {
-      const data = await jsonWithTimeout(wfsUrl('Pysakointipaikat_alue', { bounds: map.getBounds().pad(0.12), count: 2000 }), 18000, controller.signal);
-      if (!controller.signal.aborted) { setSpots((data.features || []).filter(isGeneralParkingFeature)); setSpotStatus('ready'); }
+      const requestBounds = map.getBounds().pad(0.2);
+      const data = await jsonWithTimeout(wfsUrl('Pysakointipaikat_alue', { bounds: requestBounds, count: 2000 }), 18000, controller.signal);
+      if (!controller.signal.aborted) {
+        const features = (data.features || []).filter(isGeneralParkingFeature);
+        parkingCache.current = { bounds: plainBounds(requestBounds), fetchedAt: Date.now(), features };
+        setSpots(features);
+        setSpotStatus('ready');
+      }
     } catch {
       if (!controller.signal.aborted) setSpotStatus('error');
     }
@@ -1138,8 +1206,8 @@ function App() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    let timer = setTimeout(loadSpots, 250);
-    const moved = () => { clearTimeout(timer); timer = setTimeout(loadSpots, 400); };
+    let timer = setTimeout(loadSpots, 120);
+    const moved = () => { clearTimeout(timer); timer = setTimeout(loadSpots, 650); };
     map.on('moveend', moved);
     return () => { clearTimeout(timer); map.off('moveend', moved); parkingAbort.current?.abort(); };
   }, [loadSpots]);
@@ -1195,11 +1263,19 @@ function App() {
   useEffect(() => {
     const originId = selected?.feature?.properties?.id;
     if (!originId) { setServiceMap(null); return; }
+    if (serviceMapCache.current.has(originId)) {
+      setServiceMap(serviceMapCache.current.get(originId));
+      return;
+    }
     const controller = createAbortController();
     setServiceMap(null);
     const query = new URLSearchParams({ type: 'parking_area', municipality: 'helsinki', origin_id: String(originId), geometry: 'false', page_size: '1' });
     jsonWithTimeout(`${SERVICE_MAP}?${query}`, 8000, controller.signal)
-      .then((data) => setServiceMap(data.results?.[0] || null))
+      .then((data) => {
+        const result = data.results?.[0] || null;
+        serviceMapCache.current.set(originId, result);
+        setServiceMap(result);
+      })
       .catch(() => { if (!controller.signal.aborted) setServiceMap(null); });
     return () => controller.abort();
   }, [selected?.feature]);
@@ -1209,67 +1285,24 @@ function App() {
 
   const loadFacilities = useCallback(async () => {
     const origin = location.point;
-    const serviceMapPromise = jsonWithTimeout(SERVICE_MAP_FACILITIES, 12000)
+    const serviceMapPromise = cachedJson('service-map-facilities', SERVICE_MAP_FACILITIES, 12 * 60 * 60 * 1000)
       .then((data) => serviceMapFacilities(data, origin, lang))
       .catch(() => []);
     const visibleServiceMapPromise = serviceMapPromise.then((facilitiesFromServiceMap) => {
       if (facilitiesFromServiceMap.length) setFacilities(facilitiesFromServiceMap.slice(0, 30));
       return facilitiesFromServiceMap;
     });
-    const osmPromise = jsonWithTimeout(overpassUrl(origin), 22000)
+    const osmKey = `osm-facilities:${facilityAreaKey(origin)}`;
+    const cachedOsm = readJsonCache(browserStorage(), osmKey, 6 * 60 * 60 * 1000);
+    const osmDataPromise = cachedOsm
+      ? Promise.resolve(cachedOsm)
+      : new Promise((resolve) => setTimeout(resolve, 900)).then(() => cachedJson(osmKey, overpassUrl(origin), 6 * 60 * 60 * 1000, 22000));
+    const osmPromise = osmDataPromise
       .then((data) => osmFacilities(data, origin))
       .catch(() => []);
     const openDataPromise = Promise.all([visibleServiceMapPromise, osmPromise])
       .then(([serviceMapRows, osm]) => mergeFacilities(serviceMapRows, osm, 30));
-    if (!import.meta.env.DEV) {
-      setFacilities(await openDataPromise);
-      return;
-    }
-    try {
-      const page = await jsonWithTimeout(`${LIIPI}/facilities.geojson?limit=-1`, 30000);
-      const all = page.features || [];
-      const nearest = all.map((feature) => {
-        const center = geometryCenter(feature);
-        const carCapacity = feature.properties?.builtCapacity?.CAR;
-        if (!center || !carCapacity) return null;
-        return { id: feature.id, name: feature.properties?.name?.[lang] || feature.properties?.name?.fi || 'Pysäköinti', point: center, distance: haversine(origin, center), status: feature.properties?.status, spacesAvailable: null, openNow: null, capacity: carCapacity, price: null, paymentMethods: [], source: 'liipi' };
-      }).filter((facility) => facility && facility.distance < 18000).sort((a, b) => a.distance - b.distance).slice(0, 30);
-      if (nearest.length) setFacilities(nearest);
-      const util = await jsonWithTimeout(`${LIIPI}/utilizations`, 14000).catch(() => []);
-      const utilMap = new Map();
-      for (const row of util) if (row.capacityType === 'CAR') {
-        const old = utilMap.get(row.facilityId);
-        if (!old || row.usage === 'COMMERCIAL') utilMap.set(row.facilityId, row);
-      }
-      const withUtilization = nearest.map((facility) => {
-        const usage = utilMap.get(facility.id);
-        return { ...facility, spacesAvailable: usage?.spacesAvailable, openNow: usage?.openNow };
-      });
-      if (withUtilization.length) setFacilities(withUtilization);
-      const enriched = await Promise.all(withUtilization.slice(0, 10).map(async (facility) => {
-        try {
-          const [detail, prediction] = await Promise.all([
-            jsonWithTimeout(`${LIIPI}/facilities/${facility.id}`, 9000),
-            jsonWithTimeout(`${LIIPI}/facilities/${facility.id}/prediction?after=120`, 9000).catch(() => []),
-          ]);
-          const carPredictions = (prediction || []).filter((row) => row.capacityType === 'CAR');
-          const predicted = carPredictions.find((row) => row.usage === 'COMMERCIAL') || carPredictions[0];
-          return {
-            ...facility,
-            price: parsePrice(detail, lang),
-            openNow: detail?.openingHours?.openNow ?? facility.openNow,
-            openingHours: detail?.openingHours?.info?.[lang] || detail?.openingHours?.info?.fi || '',
-            website: detail?.openingHours?.url || detail?.paymentInfo?.url || '',
-            paymentMethods: paymentMethodsFromText(JSON.stringify(detail?.paymentInfo || {})),
-            predictedSpaces: predicted?.spacesAvailable,
-          };
-        } catch { return facility; }
-      }));
-      const openData = await openDataPromise;
-      setFacilities(mergeFacilities([...enriched, ...withUtilization.slice(10)], openData, 30));
-    } catch {
-      setFacilities(await openDataPromise);
-    }
+    setFacilities(await openDataPromise);
   }, [location.point, lang]);
 
   useEffect(() => { loadFacilities(); }, [loadFacilities]);
@@ -1372,8 +1405,7 @@ function App() {
 }
 
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
-  :root{font-family:Manrope,Arial,sans-serif;color:#161b18;background:#e9e8e2;font-synthesis:none;--paper:#f9f8f4;--ink:#161b18;--muted:#696e69;--line:#deddd6;--blue:#155eef;--green:#13755b;--amber:#a76a08;--danger:#c64b2a}*{box-sizing:border-box}html,body,#root{margin:0;width:100%;height:100%;overflow:hidden}button{font:inherit;color:inherit}.app-shell{position:relative;width:100%;height:100%;min-height:680px;background:#d9dad4}.map{position:absolute;inset:0;z-index:0}.leaflet-container{font-family:Manrope,Arial,sans-serif;background:#dfe1dc}.leaflet-control-attribution{font-size:9px!important;background:rgba(249,248,244,.84)!important}.leaflet-control-zoom{border:0!important;box-shadow:0 8px 30px rgba(18,27,22,.14)!important;margin:0 24px 84px 0!important}.leaflet-control-zoom a{border:0!important;color:#222!important;background:#faf9f5!important}.topbar{position:absolute;z-index:600;left:18px;right:18px;top:16px;height:64px;display:flex;align-items:center;padding:8px 10px 8px 14px;background:rgba(249,248,244,.95);border:1px solid rgba(255,255,255,.75);border-radius:14px;box-shadow:0 8px 35px rgba(29,37,31,.12);backdrop-filter:blur(16px)}.brand{display:flex;align-items:center;gap:11px;width:235px}.brand-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:9px;background:#155eef;color:white;font-size:22px;font-weight:800;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}.brand div,.location-chip div{display:flex;flex-direction:column}.brand strong{font-size:16px;line-height:1;letter-spacing:.12em}.brand small{margin-top:5px;color:#767a76;font:500 10px/1 DM Mono,monospace;letter-spacing:.1em;text-transform:uppercase}.location-chip{margin:auto;display:flex;align-items:center;gap:10px;min-width:245px;padding:7px 15px;border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);background:transparent;cursor:pointer;text-align:left}.location-chip>span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#155eef;background:#e6edff}.location-chip .locating{animation:pulse 1.3s infinite}.location-chip strong{font-size:12px}.location-chip small{font-size:9px;color:#7b7f7b;margin-top:2px}.top-actions{display:flex;align-items:center;gap:6px;width:235px;justify-content:flex-end}.icon-button{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:#fbfaf7;cursor:pointer;transition:.2s}.icon-button:hover,.icon-button.active{border-color:#aebee8;background:#eef2ff;color:#155eef;transform:translateY(-1px)}.language{height:40px;display:flex;align-items:center;gap:4px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fbfaf7;font:600 11px DM Mono,monospace;cursor:pointer}.left-panel,.right-panel{position:absolute;z-index:500;top:96px;bottom:82px;width:370px;overflow:auto;scrollbar-width:none}.left-panel::-webkit-scrollbar,.right-panel::-webkit-scrollbar{display:none}.left-panel{left:18px}.right-panel{right:18px}.place-card,.facilities-card{position:relative;background:rgba(249,248,244,.96);border:1px solid rgba(255,255,255,.8);border-radius:15px;box-shadow:0 12px 40px rgba(24,32,26,.14);backdrop-filter:blur(18px);overflow:hidden}.place-card{padding:20px}.eyebrow{display:flex;align-items:center;gap:7px;color:#6d726d;font:600 10px DM Mono,monospace;letter-spacing:.1em;text-transform:uppercase}.panel-close{position:absolute;right:13px;top:13px;width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:transparent;cursor:pointer}.place-heading{display:flex;justify-content:space-between;align-items:center;margin:15px 0 14px}.status-pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700}.status-pill span{width:7px;height:7px;border-radius:50%;background:currentColor}.status-pill.blue{color:#155eef}.status-pill.green{color:#13755b}.status-pill.amber{color:#a76a08}.place-heading h2{margin:8px 0 0;font-size:28px;letter-spacing:-.04em}.place-heading h2 small{font-size:12px;font-weight:600;letter-spacing:0;color:#777b77}.parking-sign{width:48px;height:55px;display:grid;place-items:center;border:3px solid currentColor;border-radius:9px;background:white}.parking-sign span{font-size:28px;font-weight:800}.parking-sign.blue{color:#155eef}.parking-sign.green{color:#13755b}.parking-sign.amber{color:#a76a08}.now-banner{display:flex;align-items:center;gap:8px;margin:0 -20px;padding:11px 20px;font-size:11px}.now-banner span{margin-left:auto;font-size:10px}.now-banner.paid{background:#e9efff;color:#164fc2}.now-banner.free{background:#e4f3ed;color:#11634d}.facts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:14px 0;background:var(--line);border:1px solid var(--line);border-radius:9px;overflow:hidden}.facts-grid div{display:flex;flex-direction:column;padding:10px;background:#fbfaf7}.facts-grid span{font-size:8px;color:#7b7e7a;text-transform:uppercase;letter-spacing:.05em}.facts-grid strong{margin-top:3px;font-size:14px}.section-label{display:flex;align-items:center;gap:7px;margin-bottom:8px;color:#505550;font:600 10px DM Mono,monospace;text-transform:uppercase;letter-spacing:.07em}.hours-block,.occupancy-block,.notices{padding:14px 0;border-top:1px solid var(--line)}.hours-row{display:flex;justify-content:space-between;padding:4px 0;font-size:11px}.hours-row span{color:#6f736f}.validity{display:flex;align-items:center;gap:5px;margin-top:8px;padding:7px 8px;border-radius:6px;background:#eeeae0;color:#5c584e;font-size:9px}.occupancy-value{min-height:24px;font-size:11px}.occupancy-value strong{font-size:22px;color:#155eef}.occupancy-value.muted{color:#777c77}.occupancy-block p{margin:4px 0 0;color:#7a7e79;font-size:9px;line-height:1.45}.notice{display:flex;align-items:flex-start;gap:9px;padding:9px;border-radius:8px;margin-top:7px}.notice>svg{flex:0 0 auto;margin-top:2px}.notice span{display:flex;flex-direction:column}.notice strong{font-size:10px}.notice small{margin-top:3px;font-size:8px;line-height:1.4}.notice.danger{background:#fdeae3;color:#96371f}.notice.neutral{background:#eef0ed;color:#5f655f}.coordinates{margin-top:11px;color:#8d918d;font:400 8px/1.4 DM Mono,monospace}.empty-state{min-height:225px;text-align:center}.empty-state .eyebrow{text-align:left}.empty-illustration{position:relative;width:64px;height:64px;display:grid;place-items:center;margin:25px auto 12px;border-radius:50%;background:#e9efff;color:#155eef}.empty-illustration span{position:absolute;width:84px;height:84px;border:1px solid #c7d5f8;border-radius:50%}.empty-state h2{margin:8px 0;font-size:16px}.empty-state p{max-width:275px;margin:0 auto;color:#747874;font-size:10px;line-height:1.55}.facilities-card{max-height:100%}.facilities-head{display:flex;align-items:center;justify-content:space-between;padding:19px 19px 13px}.facilities-head h3{margin:5px 0 0;font-size:18px;letter-spacing:-.02em}.live-badge{display:flex;align-items:center;gap:5px;color:#117156;font:600 9px DM Mono,monospace}.live-badge i{width:6px;height:6px;border-radius:50%;background:#20a77f;box-shadow:0 0 0 4px #dcefe8}.facility-list{border-top:1px solid var(--line)}.facility-row{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr) 55px;gap:9px;align-items:start;padding:13px 15px;border:0;border-bottom:1px solid #e6e5df;background:transparent;text-align:left;cursor:pointer;transition:.18s}.facility-row:hover,.facility-row.selected{background:#edf2ff}.facility-row.selected{box-shadow:inset 3px 0 #155eef}.facility-rank{padding-top:2px;color:#999c98;font:500 9px DM Mono,monospace}.facility-main{min-width:0}.facility-main>strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.facility-meta{display:flex;gap:10px;align-items:center;margin-top:5px;font-size:8px;color:#6d716d}.facility-meta span{display:flex;align-items:center;gap:3px}.facility-meta .open{color:#13755b}.facility-meta .closed{color:#b14326}.facility-main small{display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#858985;font-size:8px}.availability{display:flex;flex-direction:column;align-items:flex-end;color:#155eef}.availability strong{font-size:21px;line-height:1}.availability span{margin-top:4px;color:#747975;font-size:7px;text-transform:uppercase}.availability small{margin-top:6px;padding-top:5px;border-top:1px solid #cdd8f1;color:#155eef;font:600 7px DM Mono,monospace;white-space:nowrap}.list-message{padding:20px;color:#777c77;font-size:10px;line-height:1.5}.skeleton{height:74px;display:flex;flex-direction:column;gap:9px;cursor:default}.loading-line{display:inline-block;width:90px;height:8px;border-radius:5px;background:linear-gradient(90deg,#e5e4de,#f1f0ec,#e5e4de);background-size:200% 100%;animation:shimmer 1.4s infinite}.loading-line.wide{width:150px}.map-tools{position:absolute;z-index:550;left:405px;top:96px;display:flex;flex-direction:column;gap:7px}.map-tools .icon-button{box-shadow:0 7px 24px rgba(22,30,25,.13)}.layer-popover{position:absolute;left:49px;top:0;width:230px;padding:8px;background:rgba(249,248,244,.97);border:1px solid white;border-radius:12px;box-shadow:0 12px 35px rgba(24,32,26,.15)}.popover-title{padding:6px 8px 8px;color:#6d726d;font:600 9px DM Mono,monospace;text-transform:uppercase}.layer-popover label{display:grid;grid-template-columns:12px 1fr 36px;align-items:center;gap:8px;padding:8px;border-radius:7px;font-size:10px;cursor:pointer}.layer-popover label:hover{background:#f0efea}.layer-swatch{width:9px;height:9px;border-radius:3px;background:var(--swatch)}.layer-popover input{position:absolute;opacity:0}.layer-popover i{position:relative;width:30px;height:16px;border-radius:10px;background:#ccc}.layer-popover i:after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:white;transition:.2s}.layer-popover input:checked+i{background:#155eef}.layer-popover input:checked+i:after{transform:translateX(14px)}.map-status{position:absolute;z-index:450;left:405px;bottom:83px;display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:rgba(249,248,244,.91);box-shadow:0 5px 18px rgba(22,28,24,.1);color:#646964;font:500 9px DM Mono,monospace}.status-dot{width:6px;height:6px;border-radius:50%;background:#1b9b75}.spin{animation:spin 1s linear infinite}.disclaimer{position:absolute;z-index:600;left:18px;right:18px;bottom:16px;min-height:50px;display:flex;align-items:center;gap:10px;padding:9px 14px;background:rgba(26,31,28,.94);border-radius:12px;color:#f3f1e9;box-shadow:0 8px 30px rgba(16,21,18,.22);backdrop-filter:blur(12px)}.disclaimer>svg{flex:0 0 auto;color:#f2b64b}.disclaimer span{font-size:9px;line-height:1.45}.disclaimer small{margin-left:auto;max-width:340px;text-align:right;color:#aeb4af;font:400 7px/1.4 DM Mono,monospace}.location-message{position:absolute;z-index:700;top:88px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:#222824;color:white;font-size:9px;box-shadow:0 8px 26px rgba(0,0,0,.2)}.location-message button{display:grid;place-items:center;border:0;background:transparent;color:white;cursor:pointer}.user-marker-wrap{position:relative}.user-dot{position:absolute;left:9px;top:9px;width:12px;height:12px;border:3px solid white;border-radius:50%;background:#155eef;box-shadow:0 2px 8px rgba(0,0,0,.25)}.user-pulse{position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:rgba(21,94,239,.28);animation:pulse 2s infinite}.facility-marker{height:30px;display:flex;align-items:center;border:2px solid white;border-radius:8px;background:#17231d;color:white;box-shadow:0 5px 14px rgba(18,26,22,.28);overflow:hidden;font-family:Manrope,Arial}.facility-marker b{display:grid;place-items:center;width:26px;height:100%;background:#155eef}.facility-marker span{display:grid;place-items:center;min-width:24px;padding:0 4px;font-size:9px;font-weight:800}.facility-marker.closed{opacity:.68}.facility-marker.closed b{background:#6e746f}.mobile-tabs{display:none}@keyframes pulse{0%{transform:scale(.75);opacity:.8}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{to{background-position:-200% 0}}
+  :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#161b18;background:#e9e8e2;font-synthesis:none;--paper:#f9f8f4;--ink:#161b18;--muted:#696e69;--line:#deddd6;--blue:#155eef;--green:#13755b;--amber:#a76a08;--danger:#c64b2a}*{box-sizing:border-box}html,body,#root{margin:0;width:100%;height:100%;overflow:hidden}button{font:inherit;color:inherit}.app-shell{position:relative;width:100%;height:100%;min-height:680px;background:#d9dad4}.map{position:absolute;inset:0;z-index:0}.leaflet-container{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#dfe1dc}.leaflet-control-attribution{font-size:9px!important;background:rgba(249,248,244,.84)!important}.leaflet-control-zoom{border:0!important;box-shadow:0 8px 30px rgba(18,27,22,.14)!important;margin:0 24px 84px 0!important}.leaflet-control-zoom a{border:0!important;color:#222!important;background:#faf9f5!important}.topbar{position:absolute;z-index:600;left:18px;right:18px;top:16px;height:64px;display:flex;align-items:center;padding:8px 10px 8px 14px;background:rgba(249,248,244,.95);border:1px solid rgba(255,255,255,.75);border-radius:14px;box-shadow:0 8px 35px rgba(29,37,31,.12);backdrop-filter:blur(16px)}.brand{display:flex;align-items:center;gap:11px;width:235px}.brand-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:9px;background:#155eef;color:white;font-size:22px;font-weight:800;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}.brand div,.location-chip div{display:flex;flex-direction:column}.brand strong{font-size:16px;line-height:1;letter-spacing:.12em}.brand small{margin-top:5px;color:#767a76;font:500 10px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase}.location-chip{margin:auto;display:flex;align-items:center;gap:10px;min-width:245px;padding:7px 15px;border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);background:transparent;cursor:pointer;text-align:left}.location-chip>span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#155eef;background:#e6edff}.location-chip .locating{animation:pulse 1.3s infinite}.location-chip strong{font-size:12px}.location-chip small{font-size:9px;color:#7b7f7b;margin-top:2px}.top-actions{display:flex;align-items:center;gap:6px;width:235px;justify-content:flex-end}.icon-button{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:#fbfaf7;cursor:pointer;transition:.2s}.icon-button:hover,.icon-button.active{border-color:#aebee8;background:#eef2ff;color:#155eef;transform:translateY(-1px)}.language{height:40px;display:flex;align-items:center;gap:4px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fbfaf7;font:600 11px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;cursor:pointer}.left-panel,.right-panel{position:absolute;z-index:500;top:96px;bottom:82px;width:370px;overflow:auto;scrollbar-width:none}.left-panel::-webkit-scrollbar,.right-panel::-webkit-scrollbar{display:none}.left-panel{left:18px}.right-panel{right:18px}.place-card,.facilities-card{position:relative;background:rgba(249,248,244,.96);border:1px solid rgba(255,255,255,.8);border-radius:15px;box-shadow:0 12px 40px rgba(24,32,26,.14);backdrop-filter:blur(18px);overflow:hidden}.place-card{padding:20px}.eyebrow{display:flex;align-items:center;gap:7px;color:#6d726d;font:600 10px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase}.panel-close{position:absolute;right:13px;top:13px;width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:transparent;cursor:pointer}.place-heading{display:flex;justify-content:space-between;align-items:center;margin:15px 0 14px}.status-pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700}.status-pill span{width:7px;height:7px;border-radius:50%;background:currentColor}.status-pill.blue{color:#155eef}.status-pill.green{color:#13755b}.status-pill.amber{color:#a76a08}.place-heading h2{margin:8px 0 0;font-size:28px;letter-spacing:-.04em}.place-heading h2 small{font-size:12px;font-weight:600;letter-spacing:0;color:#777b77}.parking-sign{width:48px;height:55px;display:grid;place-items:center;border:3px solid currentColor;border-radius:9px;background:white}.parking-sign span{font-size:28px;font-weight:800}.parking-sign.blue{color:#155eef}.parking-sign.green{color:#13755b}.parking-sign.amber{color:#a76a08}.now-banner{display:flex;align-items:center;gap:8px;margin:0 -20px;padding:11px 20px;font-size:11px}.now-banner span{margin-left:auto;font-size:10px}.now-banner.paid{background:#e9efff;color:#164fc2}.now-banner.free{background:#e4f3ed;color:#11634d}.facts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:14px 0;background:var(--line);border:1px solid var(--line);border-radius:9px;overflow:hidden}.facts-grid div{display:flex;flex-direction:column;padding:10px;background:#fbfaf7}.facts-grid span{font-size:8px;color:#7b7e7a;text-transform:uppercase;letter-spacing:.05em}.facts-grid strong{margin-top:3px;font-size:14px}.section-label{display:flex;align-items:center;gap:7px;margin-bottom:8px;color:#505550;font:600 10px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;text-transform:uppercase;letter-spacing:.07em}.hours-block,.occupancy-block,.notices{padding:14px 0;border-top:1px solid var(--line)}.hours-row{display:flex;justify-content:space-between;padding:4px 0;font-size:11px}.hours-row span{color:#6f736f}.validity{display:flex;align-items:center;gap:5px;margin-top:8px;padding:7px 8px;border-radius:6px;background:#eeeae0;color:#5c584e;font-size:9px}.occupancy-value{min-height:24px;font-size:11px}.occupancy-value strong{font-size:22px;color:#155eef}.occupancy-value.muted{color:#777c77}.occupancy-block p{margin:4px 0 0;color:#7a7e79;font-size:9px;line-height:1.45}.notice{display:flex;align-items:flex-start;gap:9px;padding:9px;border-radius:8px;margin-top:7px}.notice>svg{flex:0 0 auto;margin-top:2px}.notice span{display:flex;flex-direction:column}.notice strong{font-size:10px}.notice small{margin-top:3px;font-size:8px;line-height:1.4}.notice.danger{background:#fdeae3;color:#96371f}.notice.neutral{background:#eef0ed;color:#5f655f}.coordinates{margin-top:11px;color:#8d918d;font:400 8px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.empty-state{min-height:225px;text-align:center}.empty-state .eyebrow{text-align:left}.empty-illustration{position:relative;width:64px;height:64px;display:grid;place-items:center;margin:25px auto 12px;border-radius:50%;background:#e9efff;color:#155eef}.empty-illustration span{position:absolute;width:84px;height:84px;border:1px solid #c7d5f8;border-radius:50%}.empty-state h2{margin:8px 0;font-size:16px}.empty-state p{max-width:275px;margin:0 auto;color:#747874;font-size:10px;line-height:1.55}.facilities-card{max-height:100%}.facilities-head{display:flex;align-items:center;justify-content:space-between;padding:19px 19px 13px}.facilities-head h3{margin:5px 0 0;font-size:18px;letter-spacing:-.02em}.live-badge{display:flex;align-items:center;gap:5px;color:#117156;font:600 9px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.live-badge i{width:6px;height:6px;border-radius:50%;background:#20a77f;box-shadow:0 0 0 4px #dcefe8}.facility-list{border-top:1px solid var(--line)}.facility-row{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr) 55px;gap:9px;align-items:start;padding:13px 15px;border:0;border-bottom:1px solid #e6e5df;background:transparent;text-align:left;cursor:pointer;transition:.18s}.facility-row:hover,.facility-row.selected{background:#edf2ff}.facility-row.selected{box-shadow:inset 3px 0 #155eef}.facility-rank{padding-top:2px;color:#999c98;font:500 9px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.facility-main{min-width:0}.facility-main>strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.facility-meta{display:flex;gap:10px;align-items:center;margin-top:5px;font-size:8px;color:#6d716d}.facility-meta span{display:flex;align-items:center;gap:3px}.facility-meta .open{color:#13755b}.facility-meta .closed{color:#b14326}.facility-main small{display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#858985;font-size:8px}.availability{display:flex;flex-direction:column;align-items:flex-end;color:#155eef}.availability strong{font-size:21px;line-height:1}.availability span{margin-top:4px;color:#747975;font-size:7px;text-transform:uppercase}.availability small{margin-top:6px;padding-top:5px;border-top:1px solid #cdd8f1;color:#155eef;font:600 7px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;white-space:nowrap}.list-message{padding:20px;color:#777c77;font-size:10px;line-height:1.5}.skeleton{height:74px;display:flex;flex-direction:column;gap:9px;cursor:default}.loading-line{display:inline-block;width:90px;height:8px;border-radius:5px;background:linear-gradient(90deg,#e5e4de,#f1f0ec,#e5e4de);background-size:200% 100%;animation:shimmer 1.4s infinite}.loading-line.wide{width:150px}.map-tools{position:absolute;z-index:550;left:405px;top:96px;display:flex;flex-direction:column;gap:7px}.map-tools .icon-button{box-shadow:0 7px 24px rgba(22,30,25,.13)}.layer-popover{position:absolute;left:49px;top:0;width:230px;padding:8px;background:rgba(249,248,244,.97);border:1px solid white;border-radius:12px;box-shadow:0 12px 35px rgba(24,32,26,.15)}.popover-title{padding:6px 8px 8px;color:#6d726d;font:600 9px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;text-transform:uppercase}.layer-popover label{display:grid;grid-template-columns:12px 1fr 36px;align-items:center;gap:8px;padding:8px;border-radius:7px;font-size:10px;cursor:pointer}.layer-popover label:hover{background:#f0efea}.layer-swatch{width:9px;height:9px;border-radius:3px;background:var(--swatch)}.layer-popover input{position:absolute;opacity:0}.layer-popover i{position:relative;width:30px;height:16px;border-radius:10px;background:#ccc}.layer-popover i:after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:white;transition:.2s}.layer-popover input:checked+i{background:#155eef}.layer-popover input:checked+i:after{transform:translateX(14px)}.map-status{position:absolute;z-index:450;left:405px;bottom:83px;display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:rgba(249,248,244,.91);box-shadow:0 5px 18px rgba(22,28,24,.1);color:#646964;font:500 9px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.status-dot{width:6px;height:6px;border-radius:50%;background:#1b9b75}.spin{animation:spin 1s linear infinite}.disclaimer{position:absolute;z-index:600;left:18px;right:18px;bottom:16px;min-height:50px;display:flex;align-items:center;gap:10px;padding:9px 14px;background:rgba(26,31,28,.94);border-radius:12px;color:#f3f1e9;box-shadow:0 8px 30px rgba(16,21,18,.22);backdrop-filter:blur(12px)}.disclaimer>svg{flex:0 0 auto;color:#f2b64b}.disclaimer span{font-size:9px;line-height:1.45}.disclaimer small{margin-left:auto;max-width:340px;text-align:right;color:#aeb4af;font:400 7px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}.location-message{position:absolute;z-index:700;top:88px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:#222824;color:white;font-size:9px;box-shadow:0 8px 26px rgba(0,0,0,.2)}.location-message button{display:grid;place-items:center;border:0;background:transparent;color:white;cursor:pointer}.user-marker-wrap{position:relative}.user-dot{position:absolute;left:9px;top:9px;width:12px;height:12px;border:3px solid white;border-radius:50%;background:#155eef;box-shadow:0 2px 8px rgba(0,0,0,.25)}.user-pulse{position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:rgba(21,94,239,.28);animation:pulse 2s infinite}.facility-marker{height:30px;display:flex;align-items:center;border:2px solid white;border-radius:8px;background:#17231d;color:white;box-shadow:0 5px 14px rgba(18,26,22,.28);overflow:hidden;font-family:Manrope,Arial}.facility-marker b{display:grid;place-items:center;width:26px;height:100%;background:#155eef}.facility-marker span{display:grid;place-items:center;min-width:24px;padding:0 4px;font-size:9px;font-weight:800}.facility-marker.closed{opacity:.68}.facility-marker.closed b{background:#6e746f}.mobile-tabs{display:none}@keyframes pulse{0%{transform:scale(.75);opacity:.8}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{to{background-position:-200% 0}}
   @media(max-width:1050px){.right-panel{width:330px}.left-panel{width:345px}.map-tools,.map-status{left:378px}.brand,.top-actions{width:190px}.location-chip{min-width:200px}}
   @media(max-width:760px){.app-shell{min-height:560px}.topbar{left:10px;right:10px;top:10px;height:54px;padding:6px 7px 6px 9px}.brand{width:auto}.brand-mark{width:34px;height:34px}.brand div{display:none}.location-chip{margin-left:8px;min-width:0;flex:1;border-left:1px solid var(--line);border-right:0;padding:5px 8px}.location-chip>span{width:27px;height:27px}.location-chip strong{font-size:10px}.location-chip small{display:none}.top-actions{width:auto}.top-actions .icon-button:last-child{display:none}.icon-button{width:36px;height:36px}.language{height:36px;padding:0 9px}.left-panel,.right-panel{left:10px;right:10px;top:auto;bottom:110px;width:auto;max-height:45vh;display:none}.left-panel.mobile-active,.right-panel.mobile-active{display:block}.place-card,.facilities-card{border-radius:15px}.place-card{padding:16px}.now-banner{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}.map-tools{left:auto;right:10px;top:76px}.layer-popover{left:auto;right:45px}.map-status{left:10px;bottom:111px;transform:translateY(-46vh)}.leaflet-control-zoom{margin:0 10px 162px 0!important}.disclaimer{left:10px;right:10px;bottom:10px;min-height:44px;padding:8px 10px}.disclaimer span{font-size:7px}.disclaimer small{display:none}.mobile-tabs{position:absolute;z-index:610;left:10px;right:10px;bottom:64px;height:40px;display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:10px;background:rgba(249,248,244,.97);box-shadow:0 7px 22px rgba(20,27,23,.16)}.mobile-tabs button{display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:7px;background:transparent;color:#686d68;font-size:9px;font-weight:700}.mobile-tabs button.active{background:#e9efff;color:#155eef}.location-message{top:71px;max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.facility-list{max-height:36vh;overflow:auto}.place-card{max-height:45vh;overflow:auto}.facts-grid{grid-template-columns:repeat(3,1fr)}}
 `;
@@ -1388,7 +1420,7 @@ const refinedStyles = `
   .wordmark{flex:0 0 auto;padding:0 7px;color:#28312c;font-size:12px;font-weight:800;letter-spacing:-.01em}
   .brand{width:auto;flex:0 0 auto;gap:9px;padding-right:5px}.brand-mark{width:36px;height:36px;border-radius:11px;background:#1d2923;font-size:20px;box-shadow:none}.brand strong{font-size:13px;letter-spacing:.11em}.brand small{margin-top:4px;font-size:8px}
   .time-picker-wrap{position:relative;min-width:0;flex:1}.time-control{width:100%;height:42px;min-width:0;display:flex;align-items:center;gap:9px;padding:0 11px;border:0;border-radius:12px;background:#f0efe9;color:#47504a;text-align:left;cursor:pointer}.time-control>svg{flex:0 0 auto;color:#2457d6}.time-control>svg:last-child{margin-left:auto;color:#7b837d;transition:transform .18s}.time-control[aria-expanded=true]>svg:last-child{transform:rotate(180deg)}.time-control>span{min-width:0;display:flex;flex-direction:column}.time-control small{color:#7a827c;font-size:7px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}.time-control strong{margin-top:2px;overflow:hidden;text-overflow:ellipsis;color:#202722;font-size:11px;white-space:nowrap}
-  .time-popover{position:absolute;z-index:720;top:49px;left:50%;width:min(340px,calc(100vw - 20px));padding:15px;border:1px solid rgba(255,255,255,.9);border-radius:18px;background:rgba(251,250,247,.98);box-shadow:0 18px 54px rgba(22,31,26,.2);backdrop-filter:blur(22px);transform:translateX(-50%)}.time-popover-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.time-popover-head>strong{font-size:13px}.time-popover-head button{width:29px;height:29px;display:grid;place-items:center;border:0;border-radius:50%;background:#efeee9;cursor:pointer}.date-field,.time-field{display:flex;flex-direction:column;gap:6px}.date-field>span,.time-field>span{color:#737b75;font-size:8px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}.date-field input,.time-stepper input{height:42px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#202722;font:700 13px Manrope,Arial,sans-serif;outline:0}.date-field input{width:100%;padding:0 11px}.time-field{margin-top:11px}.time-stepper{display:grid;grid-template-columns:52px minmax(0,1fr) 52px;gap:7px}.time-stepper button{border:0;border-radius:11px;background:#e7ecfa;color:#2457d6;font-size:11px;font-weight:800;cursor:pointer}.time-stepper input{width:100%;padding:0 8px;text-align:center}.picker-now{width:100%;height:38px;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:11px;border:0;border-radius:11px;background:#1d2923;color:#fff;font-size:10px;font-weight:750;cursor:pointer}.top-actions{width:auto;flex:0 0 auto}.language{height:36px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:#515a54;font-size:10px}.language:hover{background:#f0efe9}
+  .time-popover{position:absolute;z-index:720;top:49px;left:50%;width:min(340px,calc(100vw - 20px));padding:15px;border:1px solid rgba(255,255,255,.9);border-radius:18px;background:rgba(251,250,247,.98);box-shadow:0 18px 54px rgba(22,31,26,.2);backdrop-filter:blur(22px);transform:translateX(-50%)}.time-popover-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.time-popover-head>strong{font-size:13px}.time-popover-head button{width:29px;height:29px;display:grid;place-items:center;border:0;border-radius:50%;background:#efeee9;cursor:pointer}.date-field,.time-field{display:flex;flex-direction:column;gap:6px}.date-field>span,.time-field>span{color:#737b75;font-size:8px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}.date-field input,.time-stepper input{height:42px;border:1px solid var(--line);border-radius:11px;background:#fff;color:#202722;font:700 13px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;outline:0}.date-field input{width:100%;padding:0 11px}.time-field{margin-top:11px}.time-stepper{display:grid;grid-template-columns:52px minmax(0,1fr) 52px;gap:7px}.time-stepper button{border:0;border-radius:11px;background:#e7ecfa;color:#2457d6;font-size:11px;font-weight:800;cursor:pointer}.time-stepper input{width:100%;padding:0 8px;text-align:center}.picker-now{width:100%;height:38px;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:11px;border:0;border-radius:11px;background:#1d2923;color:#fff;font-size:10px;font-weight:750;cursor:pointer}.top-actions{width:auto;flex:0 0 auto}.language{height:36px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:#515a54;font-size:10px}.language:hover{background:#f0efe9}
   .icon-button{width:42px;height:42px;border:0;border-radius:13px;background:rgba(251,250,247,.95);box-shadow:0 7px 24px rgba(25,34,29,.13);backdrop-filter:blur(16px)}.icon-button:hover,.icon-button.active{border:0;background:#fff;color:#2457d6;transform:none}.icon-button.locating{color:#2457d6;animation:pulseSoft 1.3s infinite}
   .map-tools{left:auto;right:18px;top:94px;gap:8px}.map-tools .icon-button{box-shadow:0 7px 24px rgba(25,34,29,.13)}
   .layer-popover{left:auto;right:50px;top:0;width:238px;padding:9px;border:1px solid rgba(255,255,255,.8);border-radius:16px;background:rgba(251,250,247,.97);box-shadow:0 14px 42px rgba(25,34,29,.16);backdrop-filter:blur(20px)}.popover-title{padding:7px 9px 9px;font-size:9px}.layer-popover label{padding:9px;border-radius:10px;font-size:11px}.layer-popover p{margin:7px 5px 3px;padding:10px 5px 2px;border-top:1px solid var(--line);color:#737b75;font-size:8px;line-height:1.5}.layer-popover i{background:#cfd3cf}.layer-popover input:checked+i{background:#2457d6}
@@ -1404,10 +1436,10 @@ const refinedStyles = `
   .facility-trigger{position:absolute;z-index:560;left:50%;bottom:22px;display:flex;align-items:center;gap:8px;height:44px;padding:0 15px;border:1px solid rgba(255,255,255,.8);border-radius:22px;background:rgba(29,41,35,.94);color:#fff;box-shadow:0 10px 32px rgba(24,33,28,.2);backdrop-filter:blur(16px);transform:translateX(-50%);cursor:pointer}.facility-trigger span{font-size:11px;font-weight:700}.facility-trigger b{display:grid;place-items:center;min-width:21px;height:21px;padding:0 6px;border-radius:12px;background:rgba(255,255,255,.15);font-size:9px}
   .map-hint{position:absolute;z-index:450;left:50%;bottom:78px;display:flex;align-items:center;gap:7px;padding:9px 12px;border-radius:18px;background:rgba(251,250,247,.9);color:#525c56;box-shadow:0 7px 24px rgba(25,34,29,.1);backdrop-filter:blur(14px);transform:translateX(-50%);font-size:10px;font-weight:650;white-space:nowrap}.map-hint svg{color:#2457d6}
   .map-legend{position:absolute;z-index:440;left:18px;bottom:18px;display:flex;align-items:center;gap:11px;padding:8px 11px;border:1px solid rgba(255,255,255,.76);border-radius:16px;background:rgba(251,250,247,.88);box-shadow:0 7px 24px rgba(25,34,29,.08);backdrop-filter:blur(14px);color:#5d665f}.map-legend span{display:flex;align-items:center;gap:5px;font-size:8px;font-weight:700;white-space:nowrap}.map-legend i{width:8px;height:8px;border-radius:3px}.map-legend i.free{background:#79c69f}.map-legend i.paid{background:#e4a45b}.map-legend i.unavailable{background:#dd8179}
-  .area-zone-label{padding:4px 7px!important;border:1px solid rgba(255,255,255,.88)!important;border-radius:8px!important;background:rgba(255,255,255,.88)!important;box-shadow:0 2px 9px rgba(28,38,32,.1)!important;font:750 9px/1 Manrope,Arial,sans-serif!important;white-space:nowrap;pointer-events:none!important}.area-zone-label:before{display:none!important}.area-zone-label.payment{color:#315ea9!important}.area-zone-label.resident{color:#704ca3!important}
-  .parking-polygon-label{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;pointer-events:none!important;display:flex;align-items:center;gap:3px}.parking-polygon-label:before{display:none!important}.parking-polygon-label span{display:block;padding:3px 5px;border:1px solid rgba(255,255,255,.8);border-radius:6px;background:rgba(255,255,255,.86);box-shadow:0 2px 8px rgba(28,38,32,.09);font:750 8px/1 Manrope,Arial,sans-serif;white-space:nowrap}.parking-polygon-label.free span{color:#1e684f}.parking-polygon-label.paid span{color:#8c5317}.parking-polygon-label.unavailable span{color:#913d36}.parking-polygon-label b{display:grid;place-items:center;width:16px;height:16px;border:2px solid #fff;border-radius:50%;background:#c5523f;color:#fff;box-shadow:0 2px 8px rgba(93,37,29,.23);font:800 10px/1 Manrope,Arial,sans-serif}
+  .area-zone-label{padding:4px 7px!important;border:1px solid rgba(255,255,255,.88)!important;border-radius:8px!important;background:rgba(255,255,255,.88)!important;box-shadow:0 2px 9px rgba(28,38,32,.1)!important;font:750 9px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;white-space:nowrap;pointer-events:none!important}.area-zone-label:before{display:none!important}.area-zone-label.payment{color:#315ea9!important}.area-zone-label.resident{color:#704ca3!important}
+  .parking-polygon-label{border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;pointer-events:none!important;display:flex;align-items:center;gap:3px}.parking-polygon-label:before{display:none!important}.parking-polygon-label span{display:block;padding:3px 5px;border:1px solid rgba(255,255,255,.8);border-radius:6px;background:rgba(255,255,255,.86);box-shadow:0 2px 8px rgba(28,38,32,.09);font:750 8px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;white-space:nowrap}.parking-polygon-label.free span{color:#1e684f}.parking-polygon-label.paid span{color:#8c5317}.parking-polygon-label.unavailable span{color:#913d36}.parking-polygon-label b{display:grid;place-items:center;width:16px;height:16px;border:2px solid #fff;border-radius:50%;background:#c5523f;color:#fff;box-shadow:0 2px 8px rgba(93,37,29,.23);font:800 10px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
   .map-status{left:50%;top:86px;bottom:auto;padding:8px 11px;transform:translateX(-50%);border-radius:15px;background:rgba(251,250,247,.94);font-size:8px}.map-status.below-message{top:126px}.location-message{top:86px;border-radius:14px;background:rgba(29,41,35,.95)}
-  .user-dot{background:#2457d6}.user-pulse{background:rgba(36,87,214,.24)}.facility-marker{width:34px;height:34px;display:grid;place-items:center;border:3px solid #fff;border-radius:50%;background:#2865d8;color:#fff;box-shadow:0 4px 14px rgba(31,71,151,.3);font:800 14px/1 Manrope,Arial,sans-serif;overflow:hidden}.facility-marker.closed{background:#747b77;color:#fff;opacity:.8}
+  .user-dot{background:#2457d6}.user-pulse{background:rgba(36,87,214,.24)}.facility-marker{width:34px;height:34px;display:grid;place-items:center;border:3px solid #fff;border-radius:50%;background:#2865d8;color:#fff;box-shadow:0 4px 14px rgba(31,71,151,.3);font:800 14px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;overflow:hidden}.facility-marker.closed{background:#747b77;color:#fff;opacity:.8}
   @keyframes pulseSoft{50%{background:#e7ecfa}}
   @media(max-width:760px){
     .topbar{left:10px;right:10px;top:10px;width:auto;height:54px;transform:none;gap:6px;padding:6px;border-radius:16px}.wordmark{padding:0 3px;font-size:11px}.time-control{height:40px;gap:7px;padding:0 9px}.time-control>svg{width:17px}.time-control strong{margin:0;font-size:11px}.time-popover{top:46px}.language{height:34px;padding:0 7px;font-size:9px}
@@ -1433,13 +1465,13 @@ const clarityStyles = `
   .time-control strong{font-size:var(--type-body)}
   .time-popover-head>strong{font-size:var(--type-label)}
   .time-popover-head button,.panel-close,.location-message button{width:44px;height:44px;min-width:44px;min-height:44px}
-  .date-field>span,.time-field>span,.eyebrow,.popover-title{font-family:Manrope,Arial,sans-serif;font-size:var(--type-caption);line-height:1.35;letter-spacing:.06em}
+  .date-field>span,.time-field>span,.eyebrow,.popover-title{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:var(--type-caption);line-height:1.35;letter-spacing:.06em}
   .date-field input,.time-stepper button,.picker-now,.picker-today{min-height:44px;font-size:var(--type-body)}
   .time-stepper{grid-template-columns:62px minmax(0,1fr) 62px}
   .time-stepper button{padding:0 5px}
   .time-stepper button:disabled{background:#ecece8;color:#a5aaa6;cursor:not-allowed;opacity:.72}
   .clock-selects{height:44px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:5px}
-  .clock-selects select{width:100%;height:44px;padding:0 5px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#202722;font:700 var(--type-body)/1 Manrope,Arial,sans-serif;text-align:center}
+  .clock-selects select{width:100%;height:44px;padding:0 5px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#202722;font:700 var(--type-body)/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;text-align:center}
   .clock-selects>span{font-size:var(--type-label);font-weight:800}
   .picker-actions{display:flex;gap:7px;margin-top:11px}
   .picker-actions button{flex:1;margin-top:0;border:0;border-radius:11px;cursor:pointer}
@@ -1450,7 +1482,7 @@ const clarityStyles = `
   .location-message button{color:inherit}
   .layer-popover label{min-height:44px;font-size:var(--type-body)}
   .layer-popover p{font-size:var(--type-caption);line-height:1.45}
-  .map-status{min-height:44px;border:0;font-family:Manrope,Arial,sans-serif;font-size:var(--type-body);line-height:1.3}
+  .map-status{min-height:44px;border:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:var(--type-body);line-height:1.3}
   button.map-status{cursor:pointer;color:#2457d6}
   button.map-status:hover,button.map-status:focus-visible{background:#fff;box-shadow:0 9px 28px rgba(25,34,29,.16)}
   .map-legend{min-height:40px}
@@ -1479,7 +1511,7 @@ const clarityStyles = `
   .detail-disclosure summary:focus-visible{outline:2px solid #2457d6;outline-offset:2px;border-radius:6px}
   .detail-rows span{color:#626b65}
   .parking-polygon-label b{width:20px;height:20px;font-size:var(--type-body)}
-  .parking-hover{padding:8px 10px!important;border:1px solid rgba(255,255,255,.9)!important;border-radius:10px!important;background:rgba(251,250,247,.97)!important;box-shadow:0 7px 22px rgba(25,34,29,.16)!important;color:#263029!important;font:700 var(--type-body)/1.25 Manrope,Arial,sans-serif!important;white-space:nowrap}
+  .parking-hover{padding:8px 10px!important;border:1px solid rgba(255,255,255,.9)!important;border-radius:10px!important;background:rgba(251,250,247,.97)!important;box-shadow:0 7px 22px rgba(25,34,29,.16)!important;color:#263029!important;font:700 var(--type-body)/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;white-space:nowrap}
   .parking-hover:before{border-top-color:rgba(251,250,247,.97)!important}
   .parking-hover.freeLong{color:#1d684f!important}.parking-hover.freeShort{color:#357664!important}.parking-hover.paid{color:#8e5719!important}.parking-hover.unavailable{color:#963f36!important}
   .facility-marker{width:36px;height:36px;font-size:var(--type-body)}
