@@ -1,0 +1,59 @@
+name: Update parking reference data
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/update-parking-data.mjs
+      - .github/workflows/update-parking-data.yml
+  schedule:
+    # One short standard-runner job per week. Public-repository Actions are
+    # currently free. If that changes, disable this workflow; the app falls
+    # back to the source APIs after the committed snapshot becomes stale.
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: parking-reference-data
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Generate reference snapshot
+        run: node scripts/update-parking-data.mjs
+
+      - name: Commit updated snapshot
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/parking-reference.json
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Update parking reference data"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy updated snapshot
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref main

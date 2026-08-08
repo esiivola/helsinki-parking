@@ -24,13 +24,16 @@ const SIIRTOVAHTI = 'https://liikenne-elastic-proxy.api.hel.ninja/mobilenote_dat
 const SERVICE_MAP = 'https://api.hel.fi/servicemap/v2/administrative_division/';
 const SERVICE_MAP_FACILITIES = 'https://api.hel.fi/servicemap/v2/unit/?service=537&municipality=helsinki&page_size=200';
 const OVERPASS = import.meta.env.DEV ? '/api/overpass/api/interpreter' : 'https://overpass-api.de/api/interpreter';
+const REFERENCE_DATA = `${import.meta.env.BASE_URL}data/parking-reference.json`;
 const MIN_PARKING_ZOOM = 16;
 export const DEFAULT_MAP_ZOOM = MIN_PARKING_ZOOM;
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, value) => String(value).padStart(2, '0'));
 const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, value) => String(value * 5).padStart(2, '0'));
 const CACHE_PREFIX = 'helsinki-parking:v3:';
 const PARKING_SPOT_CACHE_MS = 5 * 60 * 1000;
+const REFERENCE_SNAPSHOT_MAX_AGE = 10 * 24 * 60 * 60 * 1000;
 const pendingJsonRequests = new Map();
+let referenceSnapshotPromise;
 
 export function writeJsonCache(storage, key, value, now = Date.now()) {
   if (!storage) return false;
@@ -64,6 +67,19 @@ function plainBounds(bounds) {
 export function shouldReuseParkingSpotCache(cache, bounds, now = Date.now()) {
   if (!cache?.bounds || !Array.isArray(cache.features) || now - cache.fetchedAt > PARKING_SPOT_CACHE_MS) return false;
   return bounds.west >= cache.bounds.west && bounds.south >= cache.bounds.south && bounds.east <= cache.bounds.east && bounds.north <= cache.bounds.north;
+}
+
+export function isReferenceSnapshotUsable(snapshot, now = Date.now()) {
+  const generatedAt = new Date(snapshot?.generatedAt || '').getTime();
+  const age = now - generatedAt;
+  return snapshot?.schemaVersion === 1
+    && Number.isFinite(generatedAt)
+    && age >= -60 * 60 * 1000
+    && age <= REFERENCE_SNAPSHOT_MAX_AGE
+    && Array.isArray(snapshot?.paymentZones?.features)
+    && Array.isArray(snapshot?.residentZones?.features)
+    && Array.isArray(snapshot?.serviceMapFacilities?.results)
+    && Array.isArray(snapshot?.osmFacilities?.elements);
 }
 
 const copy = {
@@ -768,6 +784,15 @@ async function cachedJson(key, url, maxAge, ms = 12000) {
   return request;
 }
 
+function getReferenceSnapshot() {
+  if (!referenceSnapshotPromise) {
+    referenceSnapshotPromise = jsonWithTimeout(REFERENCE_DATA, 8000)
+      .then((snapshot) => (isReferenceSnapshotUsable(snapshot) ? snapshot : null))
+      .catch(() => null);
+  }
+  return referenceSnapshotPromise;
+}
+
 function createAbortController() {
   const Controller = typeof AbortController === 'function' ? AbortController : null;
   if (Controller) {
@@ -1108,13 +1133,23 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    cachedJson('payment-zones', wfsUrl('Pysakoinnin_maksuvyohykkeet_alue', { count: 20 }), 24 * 60 * 60 * 1000)
-      .then((data) => { if (!cancelled) setMapData((current) => ({ ...current, zones: data.features || [] })); })
-      .catch(() => {});
+    const snapshotPromise = getReferenceSnapshot();
+    snapshotPromise.then((snapshot) => {
+      if (cancelled) return;
+      if (snapshot) {
+        setMapData((current) => ({
+          ...current,
+          zones: snapshot.paymentZones.features,
+          residents: snapshot.residentZones.features,
+        }));
+        return;
+      }
+      cachedJson('payment-zones', wfsUrl('Pysakoinnin_maksuvyohykkeet_alue', { count: 20 }), 24 * 60 * 60 * 1000)
+        .then((data) => { if (!cancelled) setMapData((current) => ({ ...current, zones: data.features || [] })); })
+        .catch(() => {});
+    });
     const deferred = setTimeout(async () => {
       const closuresFromCache = readJsonCache(browserStorage(), 'active-closures', 10 * 60 * 1000);
-      const residentsPromise = cachedJson('resident-zones', wfsUrl('Asukas_ja_yrityspysakointivyohykkeet_alue', { count: 40 }), 24 * 60 * 60 * 1000)
-        .then((data) => data.features || []).catch(() => []);
       const closuresPromise = closuresFromCache ? Promise.resolve(closuresFromCache) : settleAll([
         jsonWithTimeout(wfsUrl('Winkki_works', { count: 1000 })),
         jsonWithTimeout(wfsUrl('Winkki_rents_audiences', { count: 1200 })),
@@ -1129,6 +1164,11 @@ function App() {
         writeJsonCache(browserStorage(), 'active-closures', active);
         return active;
       });
+      const snapshot = await snapshotPromise;
+      const residentsPromise = snapshot
+        ? Promise.resolve(snapshot.residentZones.features)
+        : cachedJson('resident-zones', wfsUrl('Asukas_ja_yrityspysakointivyohykkeet_alue', { count: 40 }), 24 * 60 * 60 * 1000)
+          .then((data) => data.features || []).catch(() => []);
       const [residents, closures] = await Promise.all([residentsPromise, closuresPromise]);
       if (!cancelled) setMapData((current) => ({ ...current, residents, closures }));
     }, 900);
@@ -1285,7 +1325,11 @@ function App() {
 
   const loadFacilities = useCallback(async () => {
     const origin = location.point;
-    const serviceMapPromise = cachedJson('service-map-facilities', SERVICE_MAP_FACILITIES, 12 * 60 * 60 * 1000)
+    const snapshot = await getReferenceSnapshot();
+    const serviceMapDataPromise = snapshot
+      ? Promise.resolve(snapshot.serviceMapFacilities)
+      : cachedJson('service-map-facilities', SERVICE_MAP_FACILITIES, 12 * 60 * 60 * 1000);
+    const serviceMapPromise = serviceMapDataPromise
       .then((data) => serviceMapFacilities(data, origin, lang))
       .catch(() => []);
     const visibleServiceMapPromise = serviceMapPromise.then((facilitiesFromServiceMap) => {
@@ -1294,9 +1338,12 @@ function App() {
     });
     const osmKey = `osm-facilities:${facilityAreaKey(origin)}`;
     const cachedOsm = readJsonCache(browserStorage(), osmKey, 6 * 60 * 60 * 1000);
-    const osmDataPromise = cachedOsm
-      ? Promise.resolve(cachedOsm)
-      : new Promise((resolve) => setTimeout(resolve, 900)).then(() => cachedJson(osmKey, overpassUrl(origin), 6 * 60 * 60 * 1000, 22000));
+    const useSnapshotOsm = snapshot && haversine(HELSINKI, origin) < 1500;
+    const osmDataPromise = useSnapshotOsm
+      ? Promise.resolve(snapshot.osmFacilities)
+      : (cachedOsm
+        ? Promise.resolve(cachedOsm)
+        : new Promise((resolve) => setTimeout(resolve, 900)).then(() => cachedJson(osmKey, overpassUrl(origin), 6 * 60 * 60 * 1000, 22000)));
     const osmPromise = osmDataPromise
       .then((data) => osmFacilities(data, origin))
       .catch(() => []);

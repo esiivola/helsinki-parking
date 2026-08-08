@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, facilityAreaKey, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingPolygonStyle, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, readJsonCache, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldReuseParkingSpotCache, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers, writeJsonCache } from './main.jsx';
+import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, facilityAreaKey, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, isReferenceSnapshotUsable, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingPolygonStyle, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, readJsonCache, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldReuseParkingSpotCache, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers, writeJsonCache } from './main.jsx';
 
 describe('parking map helpers', () => {
   it('detects a point inside a GeoJSON polygon', () => {
@@ -343,6 +343,22 @@ describe('parking map helpers', () => {
     expect(readJsonCache(storage, 'test', 5_000, 6_001)).toBeNull();
     expect(readJsonCache({ getItem: () => '{' }, 'broken', 5_000, 2_000)).toBeNull();
   });
+
+  it('uses only fresh and structurally complete reference snapshots', () => {
+    const now = new Date('2026-08-08T12:00:00Z').getTime();
+    const snapshot = {
+      schemaVersion: 1,
+      generatedAt: '2026-08-01T12:00:00Z',
+      paymentZones: { features: [] },
+      residentZones: { features: [] },
+      serviceMapFacilities: { results: [] },
+      osmFacilities: { elements: [] },
+    };
+    expect(isReferenceSnapshotUsable(snapshot, now)).toBe(true);
+    expect(isReferenceSnapshotUsable({ ...snapshot, generatedAt: '2026-07-20T12:00:00Z' }, now)).toBe(false);
+    expect(isReferenceSnapshotUsable({ ...snapshot, generatedAt: '2026-08-09T12:00:00Z' }, now)).toBe(false);
+    expect(isReferenceSnapshotUsable({ ...snapshot, osmFacilities: null }, now)).toBe(false);
+  });
 });
 
 describe('static search metadata', () => {
@@ -381,6 +397,23 @@ describe('static search metadata', () => {
     expect(source).not.toContain('/facilities.geojson?limit=-1');
     expect(source).not.toContain('/prediction?after=120');
     expect(source).not.toContain('/utilizations');
+  });
+
+  it('keeps the optional static-data workflow free-tier friendly and reversible', () => {
+    const workflow = projectFile('.github/workflows/update-parking-data.yml');
+    const generator = projectFile('scripts/update-parking-data.mjs');
+    const snapshot = JSON.parse(projectFile('public/data/parking-reference.json'));
+    const source = projectFile('src/main.jsx');
+    expect(workflow).toContain('schedule:');
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain('contents: write');
+    expect(workflow).toContain('node scripts/update-parking-data.mjs');
+    expect(workflow).not.toContain('actions/cache');
+    expect(generator).toContain('node:fs/promises');
+    expect(snapshot.schemaVersion).toBe(1);
+    expect(source).toContain('isReferenceSnapshotUsable');
+    expect(source).toContain("cachedJson('payment-zones'");
+    expect(source).toContain("cachedJson('service-map-facilities'");
   });
 
   it('uses natural Finnish wording and omits unreliable street occupancy', () => {
