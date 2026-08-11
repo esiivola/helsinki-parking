@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, facilityAreaKey, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isGeneralParkingFeature, isReferenceSnapshotUsable, mergeFacilities, nextPaidStart, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingDurationMinutes, parkingExceptions, parkingFeatureAt, parkingNowStatus, parkingPolygonState, parkingPolygonStyle, parkingTimeStepDisabled, parseParkingValidity, pointInFeature, pointToLineDistance, readJsonCache, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldReuseParkingSpotCache, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers, writeJsonCache } from './main.jsx';
+import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, facilityAreaKey, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isReferenceSnapshotUsable, mergeFacilities, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingExceptions, parkingFeatureAt, parkingPolygonState, parkingPolygonStyle, parkingTimeStepDisabled, pointInFeature, pointToLineDistance, readJsonCache, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldReuseParkingSpotCache, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers, writeJsonCache } from './main.jsx';
+import { classifyParkingSpot, formatStayMinutes, isGeneralParkingFeature, nextPaidStart, parkingDurationMinutes, parkingNowStatus, parkingPermitCode, parkingTypeKind, parseParkingValidity, spotMaxStay, PARKING_CLASS_RULES } from './parking-rules.js';
 
 describe('parking map helpers', () => {
   it('detects a point inside a GeoJSON polygon', () => {
@@ -106,7 +107,7 @@ describe('parking map helpers', () => {
     expect(unavailable.until).toBeGreaterThan(new Date('2026-08-13T12:00:00').getTime());
     const free = parkingPolygonState(space, '1', new Date('2026-08-10T23:00:00'), [], [], 'fi');
     expect(free.status).toBe('freeLong');
-    expect(free.label).toBe('Maksuton · ti klo 9 asti');
+    expect(free.label).toBe('Maksuton · ti klo 9 asti · enintään 4 h');
     expect(free.nextPaidAt).toBeInstanceOf(Date);
   });
 
@@ -132,10 +133,73 @@ describe('parking map helpers', () => {
     const long = parkingPolygonState({ properties: { luokka: 8, kesto: '2 h' } }, null, new Date('2026-08-10T12:00:00'), [], [], 'fi');
     const unlimited = parkingPolygonState({ properties: { luokka: 1, kesto: 'ei aikarajoitusta' } }, null, new Date('2026-08-10T12:00:00'), [], [], 'fi');
     const unknown = parkingPolygonState({ properties: { luokka: 1 } }, null, new Date('2026-08-10T12:00:00'), [], [], 'fi');
-    expect([short.status, short.label]).toEqual(['freeShort', '30 min kiekolla']);
-    expect([long.status, long.label]).toEqual(['freeLong', '2 h kiekolla']);
+    expect([short.status, short.label]).toEqual(['freeShort', 'Maksuton kiekolla · enintään 30 min']);
+    expect([long.status, long.label]).toEqual(['freeLong', 'Maksuton kiekolla · enintään 2 h']);
     expect([unlimited.status, unlimited.label]).toEqual(['freeLong', 'Maksuton · ei aikarajaa']);
-    expect([unknown.status, unknown.label]).toEqual(['freeLong', 'Maksuton · aikaraja ei tiedossa']);
+    expect([unknown.status, unknown.label]).toEqual(['freeShort', 'Maksuton · enintään 1 h']);
+  });
+
+  it('reads class 9 hours as a no-parking window rather than chargeable hours', () => {
+    // "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella": voimassaolo lists
+    // when parking is forbidden, so outside it the space is free.
+    const space = { properties: { luokka: 9, voimassaolo: '8-17' } };
+    const banned = parkingPolygonState(space, null, new Date(2026, 7, 10, 10, 55), [], [], 'fi');
+    const allowed = parkingPolygonState(space, null, new Date(2026, 7, 10, 19, 0), [], [], 'fi');
+    expect([banned.status, banned.label]).toEqual(['unavailable', 'Pysäköinti kielletty · klo 17 asti']);
+    expect([allowed.status, allowed.label]).toEqual(['freeLong', 'Maksuton · ti klo 8 asti · ei aikarajaa']);
+    const unreadable = parkingPolygonState({ properties: { luokka: 9, voimassaolo: '7-15, Maksullinen (9-18)' } }, null, new Date(2026, 7, 10, 19, 0), [], [], 'fi');
+    expect([unreadable.status, unreadable.label]).toEqual(['unavailable', 'Pysäköinti kielletty · kieltoajat tarkistettava']);
+  });
+
+  it('colours a space with an unstated time limit as short-stay parking', () => {
+    const assumed = parkingPolygonState({ properties: { luokka: 1 } }, null, new Date(2026, 7, 10, 12, 0), [], [], 'fi');
+    const published = parkingPolygonState({ properties: { luokka: 1, kesto: '2 h' } }, null, new Date(2026, 7, 10, 12, 0), [], [], 'fi');
+    expect([assumed.status, assumed.label]).toEqual(['freeShort', 'Maksuton · enintään 1 h']);
+    expect(assumed.meta.maxStayAssumed).toBe(true);
+    expect([published.status, published.label]).toEqual(['freeLong', 'Maksuton · enintään 2 h']);
+    expect(published.meta.maxStayAssumed).toBe(false);
+  });
+
+  it('keeps a no-parking area off the map even when it carries a permit code', () => {
+    const banned = { properties: { luokka: 0, tyyppi: 'Pysäköintikielto', asukaspysakointitunnus: '0' } };
+    expect(spotMeta(banned, '1', 'fi')).toMatchObject({ kind: 'prohibited', price: 0, permit: '' });
+    expect(parkingPolygonState(banned, '1', new Date(2026, 7, 10, 12, 0), [], [], 'fi').status).toBe('unavailable');
+    expect(isGeneralParkingFeature(banned)).toBe(false);
+  });
+
+  it('shows a disc space as free rather than resident parking', () => {
+    const disc = { properties: { luokka: 8, kesto: '4 h', voimassaolo: '8-20', asukaspysakointitunnus: 'N' } };
+    const state = parkingPolygonState(disc, '1', new Date(2026, 7, 10, 12, 0), [], [], 'fi');
+    expect([state.status, state.label]).toEqual(['freeLong', 'Maksuton kiekolla · enintään 4 h klo 8–20']);
+    expect(state.meta.permit).toBe('N');
+  });
+
+  it('names the window a free or disc time limit applies in', () => {
+    // voimassaolo on a free space is the window the limit runs in, not a
+    // chargeable period. Naming it adds information without claiming the limit
+    // lifts outside it.
+    const disc = { properties: { luokka: 8, kesto: '4 h', voimassaolo: '8-20' } };
+    expect(parkingPolygonState(disc, null, new Date(2026, 7, 10, 12, 0), [], [], 'fi').label).toBe('Maksuton kiekolla · enintään 4 h klo 8–20');
+    expect(parkingPolygonState(disc, null, new Date(2026, 7, 10, 22, 0), [], [], 'fi').label).toBe('Maksuton kiekolla · enintään 4 h klo 8–20');
+    // Saturday carries its own hours, and a day with none stated says nothing.
+    const weekend = { properties: { luokka: 1, kesto: '30 min', voimassaolo: '8-17, (9-15)' } };
+    expect(parkingPolygonState(weekend, null, new Date(2026, 7, 15, 12, 0), [], [], 'fi').label).toBe('Maksuton · enintään 30 min klo 9–15');
+    expect(parkingPolygonState(weekend, null, new Date(2026, 7, 16, 12, 0), [], [], 'fi').label).toBe('Maksuton · enintään 30 min');
+    expect(parkingPolygonState({ properties: { luokka: 1, kesto: '30 min' } }, null, new Date(2026, 7, 10, 12, 0), [], [], 'fi').label).toBe('Maksuton · enintään 30 min');
+  });
+
+  it('does not read a paid or no-parking window as a stay limit window', () => {
+    // On those classes voimassaolo already drives the deadline, so repeating it
+    // beside the limit would say two different things about the same hours.
+    const paid = parkingPolygonState({ properties: { luokka: 5, kesto: '4 h', voimassaolo: '9-21' } }, null, new Date(2026, 7, 10, 23, 0), [], [], 'fi');
+    expect(paid.label).toBe('Maksuton · ti klo 9 asti · enintään 4 h');
+    const offPeak = parkingPolygonState({ properties: { luokka: 9, voimassaolo: '8-17' } }, null, new Date(2026, 7, 10, 19, 0), [], [], 'fi');
+    expect(offPeak.label).toBe('Maksuton · ti klo 8 asti · ei aikarajaa');
+  });
+
+  it('reports the window in English without the Finnish clock prefix', () => {
+    const disc = { properties: { luokka: 8, kesto: '4 h', voimassaolo: '8-20' } };
+    expect(parkingPolygonState(disc, null, new Date(2026, 7, 10, 12, 0), [], [], 'en').label).toBe('Free with parking disc · maximum 4 h, 8–20');
   });
 
   it('disables time stepping at the selectable range limits', () => {
@@ -157,20 +221,22 @@ describe('parking map helpers', () => {
   it('derives price and resident permit from a parking feature', () => {
     const feature = { properties: { luokka: 10, luokka_nimi: 'Maksullinen vyöhykehinta', asukaspysakointitunnus: 'A', paikat_ala: 5 } };
     const meta = spotMeta(feature, '1', 'fi');
-    expect(meta.kind).toBe('resident');
+    expect(meta.kind).toBe('paid');
     expect(meta.price).toBe(4);
-    expect(meta.residentCode).toBe('A');
+    expect(meta.permit).toBe('A');
   });
 
   it('only displays spaces usable for general parking', () => {
     expect(isGeneralParkingFeature({ properties: { luokka: 5 } })).toBe(true);
-    expect(isGeneralParkingFeature({ properties: { luokka: 9 } })).toBe(false);
+    expect(isGeneralParkingFeature({ properties: { luokka: 9 } })).toBe(true);
+    expect(isGeneralParkingFeature({ properties: { luokka: 11, asukaspysakointitunnus: 'Z' } })).toBe(false);
+    expect(isGeneralParkingFeature({ properties: { tyyppi: 'Pysäköintikielto' } })).toBe(false);
     expect(isGeneralParkingFeature({ properties: { tyyppi: 'Kuormauspaikka' } })).toBe(false);
     expect(isGeneralParkingFeature({ properties: { tyyppi: 'Invapaikka' } })).toBe(false);
   });
 
   it('does not treat background or restricted-area clicks as parking', () => {
-    const restricted = { geometry: { type: 'Polygon', coordinates: [[[24.94, 60.17], [24.95, 60.17], [24.95, 60.18], [24.94, 60.18], [24.94, 60.17]]] }, properties: { luokka: 9 } };
+    const restricted = { geometry: { type: 'Polygon', coordinates: [[[24.94, 60.17], [24.95, 60.17], [24.95, 60.18], [24.94, 60.18], [24.94, 60.17]]] }, properties: { luokka: 0, tyyppi: 'Pysäköintikielto', asukaspysakointitunnus: '0' } };
     expect(parkingFeatureAt([24.945, 60.175], null, [])).toBeNull();
     expect(parkingFeatureAt([24.945, 60.175], restricted, [restricted])).toBeNull();
   });

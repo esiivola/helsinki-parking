@@ -1,0 +1,2911 @@
+{
+  "layer": "Pysakointipaikat_alue",
+  "capturedAt": "2026-08-10T08:25:30.856Z",
+  "features": 8752,
+  "cases": [
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": "N"
+      },
+      "count": 566
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": "M"
+      },
+      "count": 454
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 397
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "I"
+      },
+      "count": 375
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": "O"
+      },
+      "count": 352
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 343
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "H"
+      },
+      "count": 282
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "F"
+      },
+      "count": 262
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Sähköpotkulauta",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 257
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 255
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "K"
+      },
+      "count": 246
+    },
+    {
+      "properties": {
+        "luokka": "10",
+        "luokka_nimi": "Maksullinen vyöhykehinta",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 230
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "E"
+      },
+      "count": 228
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 222
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "J"
+      },
+      "count": 183
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "A"
+      },
+      "count": 179
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Sähköauto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 160
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 156
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 149
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "B"
+      },
+      "count": 144
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "C"
+      },
+      "count": 137
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "C"
+      },
+      "count": 133
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "D"
+      },
+      "count": 124
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 113
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 113
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "B, C"
+      },
+      "count": 102
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "J"
+      },
+      "count": 98
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "B"
+      },
+      "count": 96
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": "P"
+      },
+      "count": 92
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "8-18",
+        "asukaspysakointitunnus": "L"
+      },
+      "count": 87
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Inva",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 78
+    },
+    {
+      "properties": {
+        "luokka": "4",
+        "luokka_nimi": "Kertamaksu enintään 2 tuntia",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 77
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 76
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "H"
+      },
+      "count": 73
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "K"
+      },
+      "count": 72
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Kuormauspaikka",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 66
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 61
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "I"
+      },
+      "count": 61
+    },
+    {
+      "properties": {
+        "luokka": "11",
+        "luokka_nimi": "Z-tunnus nouto/palautus",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "Z"
+      },
+      "count": 58
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "CD",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 57
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 56
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "A"
+      },
+      "count": 55
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Sähköpotkulauta",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 55
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "F"
+      },
+      "count": 50
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "I"
+      },
+      "count": 47
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": "H"
+      },
+      "count": 47
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 44
+    },
+    {
+      "properties": {
+        "luokka": "10",
+        "luokka_nimi": "Maksullinen vyöhykehinta",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 36
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-18, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 36
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 36
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": "F"
+      },
+      "count": 32
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21\n",
+        "asukaspysakointitunnus": "H"
+      },
+      "count": 30
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "C"
+      },
+      "count": 28
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "J"
+      },
+      "count": 28
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "A, B"
+      },
+      "count": 27
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "B, C"
+      },
+      "count": 25
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-18",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 24
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Sähköauto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 22
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "B"
+      },
+      "count": 21
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": "J"
+      },
+      "count": 20
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "F, H"
+      },
+      "count": 19
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-21)",
+        "asukaspysakointitunnus": "I"
+      },
+      "count": 19
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "A, B"
+      },
+      "count": 18
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "B, C"
+      },
+      "count": 18
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-21), 9-21\n",
+        "asukaspysakointitunnus": "H"
+      },
+      "count": 18
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "I, J"
+      },
+      "count": 18
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "F"
+      },
+      "count": 18
+    },
+    {
+      "properties": {
+        "luokka": "2",
+        "luokka_nimi": "Ilmainen pitkäaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 18
+    },
+    {
+      "properties": {
+        "luokka": "10",
+        "luokka_nimi": "Maksullinen vyöhykehinta",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "0-24, (0-24), 0-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 18
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Moottoripyörä",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 17
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "H"
+      },
+      "count": 17
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Kuormauspaikka",
+        "kesto": "",
+        "voimassaolo": "7-18 (7-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 16
+    },
+    {
+      "properties": {
+        "luokka": "3",
+        "luokka_nimi": "Kertamaksu enintään 1 tunti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 16
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "F, H"
+      },
+      "count": 16
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4h",
+        "voimassaolo": "6-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 16
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "30 min, (30 мин)",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 14
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "8-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 14
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "H/L"
+      },
+      "count": 14
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "E"
+      },
+      "count": 12
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-17",
+        "asukaspysakointitunnus": "B, C"
+      },
+      "count": 12
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Polkupyörä",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 11
+    },
+    {
+      "properties": {
+        "luokka": "2",
+        "luokka_nimi": "Ilmainen pitkäaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "24 h",
+        "voimassaolo": "0-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 11
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "60 min, (60 мин)",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 11
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "A, F"
+      },
+      "count": 10
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 10
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Kuormauspaikka",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 10
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-17",
+        "asukaspysakointitunnus": "C"
+      },
+      "count": 10
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "9",
+        "kesto": "",
+        "voimassaolo": "8-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 10
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-15, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 9
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 8
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (16-20), 16-20",
+        "asukaspysakointitunnus": "H"
+      },
+      "count": 8
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi, lataus",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 8
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "8-17, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 8
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-15",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 8
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Inva",
+        "kesto": "",
+        "voimassaolo": "8-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 7
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 7
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 7
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 7
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "H"
+      },
+      "count": 7
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "24 h",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 6
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 6
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 6
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18), 9-18",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 6
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "ei aikarajoitusta",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 6
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "max 60 min lauantai",
+        "voimassaolo": "7-15, Maksullinen (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 5
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "15 min, (15 мин)",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 5
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "2 h, (2 ч)",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 5
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "",
+        "voimassaolo": "7-15, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 5
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "0",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "10",
+        "luokka_nimi": "Maksullinen vyöhykehinta",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-18, (7-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": "A/F"
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "B"
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "3",
+        "luokka_nimi": "Kertamaksu enintään 1 tunti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-19",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "I"
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "C, E"
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-18, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": "E"
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "C"
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "8-19, (8-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Sähköauto",
+        "kesto": "12 h",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 4
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "C"
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäyttämiskielto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Kuormauspaikka",
+        "kesto": "",
+        "voimassaolo": "7-18",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "I"
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "30 min",
+        "voimassaolo": "8-20, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "8-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "max 60 min lauantai",
+        "voimassaolo": "7-18, Maksullinen (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "4",
+        "luokka_nimi": "Kertamaksu enintään 2 tuntia",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "E"
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "30 min",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "6-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "3",
+        "luokka_nimi": "Kertamaksu enintään 1 tunti",
+        "tyyppi": "",
+        "kesto": "30min",
+        "voimassaolo": "8-24, (8-24), 8-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Virka-auto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Polkupyörä",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "8-18",
+        "asukaspysakointitunnus": "H, L"
+      },
+      "count": 3
+    },
+    {
+      "properties": {
+        "luokka": "10",
+        "luokka_nimi": "Maksullinen vyöhykehinta",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "2",
+        "luokka_nimi": "Ilmainen pitkäaikainen pysäköinti",
+        "tyyppi": "henkilöauto, pakettiauto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "3",
+        "luokka_nimi": "Kertamaksu enintään 1 tunti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21 (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "4",
+        "luokka_nimi": "Kertamaksu enintään 2 tuntia",
+        "tyyppi": "",
+        "kesto": "4",
+        "voimassaolo": "9-18 (9-16)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "2",
+        "luokka_nimi": "Ilmainen pitkäaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "24",
+        "voimassaolo": "0-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "D"
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "3",
+        "luokka_nimi": "Kertamaksu enintään 1 tunti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "0-24, (0-24), 0-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "11",
+        "luokka_nimi": "Z-tunnus nouto/palautus",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "\n8-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21 (9-18)",
+        "asukaspysakointitunnus": "B,C"
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "10",
+        "luokka_nimi": "Maksullinen vyöhykehinta",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "A, F"
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "3",
+        "luokka_nimi": "Kertamaksu enintään 1 tunti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "8-24, (8-24), 8-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-23, (7-23), 7-23",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-17",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "J, K"
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "30 min",
+        "voimassaolo": "8-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "30 min",
+        "voimassaolo": "7-18",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "30 min",
+        "voimassaolo": "7-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-17, (7-17)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "15 min",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Kuormauspaikka",
+        "kesto": "",
+        "voimassaolo": "7-18, (7-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "24 h",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "30 min, 30 мин",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "24 h",
+        "voimassaolo": "0-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Poliisi",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "8",
+        "kesto": "2 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "30min",
+        "voimassaolo": "6-18",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Inva",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 2
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-18",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "4 h",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "E"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)\n",
+        "asukaspysakointitunnus": "B"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "A, B"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": "Z"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Taksi",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "pysäköintikielto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "8",
+        "kesto": "4 h",
+        "voimassaolo": "6-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "2",
+        "luokka_nimi": "Ilmainen pitkäaikainen pysäköinti",
+        "tyyppi": "henkilöauto, pakettiauto",
+        "kesto": "24h",
+        "voimassaolo": "0-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 H",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": "N"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": "N"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "10",
+        "luokka_nimi": "Maksullinen vyöhykehinta",
+        "tyyppi": "0",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "3",
+        "luokka_nimi": "Kertamaksu enintään 1 tunti",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-24, (8-24), 8-24",
+        "asukaspysakointitunnus": "3"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Kuormauspaikka",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60min",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "",
+        "voimassaolo": "8-20 (8-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "",
+        "voimassaolo": "7-18, (7-15)",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "4",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-16",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "A, B"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-18)\n",
+        "asukaspysakointitunnus": "A, B"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "\n9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "4 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Pysäköintikielto",
+        "kesto": "4 ",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-21, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-15, (17-21)",
+        "asukaspysakointitunnus": "B"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": "J"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "11-16, (11-16), 11-16",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-18, (9-15)\n",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "F"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)\n",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "B/C"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "30 min",
+        "voimassaolo": "8-20 (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "5",
+        "luokka_nimi": "Kertamaksu enintään 4 tuntia",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-18 (7-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-17, (9-15), 9-15",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "2 h",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": "F"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "15 min",
+        "voimassaolo": "7-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "6-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "6-24, (6-24), 6-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "4",
+        "luokka_nimi": "Kertamaksu enintään 2 tuntia",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9.21, (9-18)",
+        "asukaspysakointitunnus": "C"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-17, (7-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-15",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "8-17, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-19",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-18",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "7-19, (7-12), 7-12",
+        "asukaspysakointitunnus": "E"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "CD",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "7",
+        "luokka_nimi": "Kertamaksu enintään 1 h ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "60 min",
+        "voimassaolo": "9-21, (9-21), 9-21",
+        "asukaspysakointitunnus": "I"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "9-21, (9-18)",
+        "asukaspysakointitunnus": "F"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-15, (9-15)",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "CD",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Inva",
+        "kesto": "",
+        "voimassaolo": "7-20",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Kaupunginkanslia",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Kirjastoauto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "ei aikarajaa",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "30 min",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "60 min, 60 мин",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "6h",
+        "voimassaolo": "6-24, (9-21), 9-21",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "60 min, (60 мин)",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Parklet",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "9",
+        "luokka_nimi": "Pysäköinti sallittu pysäköintikieltoajan ulkopuolella",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "7-18, (7-15)",
+        "asukaspysakointitunnus": "0"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Sähköauto",
+        "kesto": "12 h",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi",
+        "kesto": "",
+        "voimassaolo": "22-05, (22-05), 22-05",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi",
+        "kesto": "",
+        "voimassaolo": "0-5, (0-5), 0-5",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi",
+        "kesto": "",
+        "voimassaolo": "22-04, (22-04), 22-04",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi",
+        "kesto": "",
+        "voimassaolo": "18-05, (18-05), 18-05",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Valtioneuvosto",
+        "kesto": "",
+        "voimassaolo": "",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9-21 (9-18)",
+        "asukaspysakointitunnus": "B"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "6",
+        "luokka_nimi": "Maksullinen ilman asukas-/yritystunnusta. Maksullisuusajat vaihtelevat kohteesta riippuen.",
+        "tyyppi": "",
+        "kesto": "",
+        "voimassaolo": "9.21 (9-18)",
+        "asukaspysakointitunnus": "B,C"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "8",
+        "kesto": "2 h",
+        "voimassaolo": "9-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "",
+        "luokka_nimi": "",
+        "tyyppi": "Matkailuliikenne",
+        "kesto": "2 h",
+        "voimassaolo": "9-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "15 min",
+        "voimassaolo": "7-9, 15-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi",
+        "kesto": "",
+        "voimassaolo": "8-18",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Kuorma-auto",
+        "kesto": "24 h",
+        "voimassaolo": "0-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "0",
+        "luokka_nimi": "",
+        "tyyppi": "Taxi",
+        "kesto": "",
+        "voimassaolo": "20-5",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "8",
+        "kesto": "4 h",
+        "voimassaolo": "8-20",
+        "asukaspysakointitunnus": "N"
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "1",
+        "luokka_nimi": "Ilmainen lyhytaikainen pysäköinti",
+        "tyyppi": "",
+        "kesto": "15 min",
+        "voimassaolo": "7 - 17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "30 min",
+        "voimassaolo": "8-17",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    },
+    {
+      "properties": {
+        "luokka": "8",
+        "luokka_nimi": "Ilman asukas-/yritystunnusta ilmainen lyhytaikainen pysäköinti. Käytä pysäköintikiekkoa.",
+        "tyyppi": "",
+        "kesto": "4 h",
+        "voimassaolo": "6-24",
+        "asukaspysakointitunnus": ""
+      },
+      "count": 1
+    }
+  ]
+}

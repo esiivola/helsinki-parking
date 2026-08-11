@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { PARKABLE_KINDS, classifyParkingSpot, formatStayMinutes, isGeneralParkingFeature, nextPaidStart, nextScheduleStart, parkingNowStatus, parkingPermitCode, parseParkingValidity, schedulePeriodAt, SHORT_STAY_MINUTES } from './parking-rules.js';
 import {
   AlertTriangle,
   Building2,
@@ -85,14 +86,14 @@ export function isReferenceSnapshotUsable(snapshot, now = Date.now()) {
 const copy = {
   fi: {
     appName: 'PARKKI', region: 'Helsinki', locating: 'Haetaan sijaintia…', locationReady: 'Sijaintisi', locationFallback: 'Helsingin keskusta',
-    when: 'Pysäköintiaika', date: 'Päivä', time: 'Kellonaika', today: 'Tänään', now: 'Nyt', paidAtTime: 'Maksullinen', freeAtTime: 'Maksuton', paidUntil: 'Maksullinen asti', chargingStarts: 'Maksu alkaa', maxStay: 'Enintään', mapHint: 'Valitse pysäköintipaikka kartalta', detailsSummary: 'Lisätiedot',
-    freeLegend: 'Maksuton', freeLongLegend: 'Maksuton', freeShortLegend: 'Maksuton alle 60 min', paidLegend: 'Maksullinen', unavailableLegend: 'Väliaikaisesti poissa käytöstä', freeLabel: 'Vapaa', paidLabel: 'Maksullinen', unavailableLabel: 'Väliaikaisesti poissa käytöstä', upcomingException: 'Tuleva poikkeus', activeException: 'Voimassa oleva poikkeus', starts: 'Alkaa', ends: 'Päättyy', noTimeLimit: 'ei aikarajaa', limitUnknown: 'aikaraja ei tiedossa', scheduleUnknown: 'maksulliset ajat tarkistettava', withDisc: 'kiekolla',
+    when: 'Pysäköintiaika', date: 'Päivä', time: 'Kellonaika', today: 'Tänään', now: 'Nyt', paidUntil: 'Maksullinen asti', chargingStarts: 'Maksu alkaa', maxStay: 'Enintään', mapHint: 'Valitse pysäköintipaikka kartalta', detailsSummary: 'Lisätiedot',
+    freeLegend: 'Maksuton', freeLongLegend: 'Maksuton', freeShortLegend: 'Maksuton, enintään 1 h', paidLegend: 'Maksullinen', unavailableLegend: 'Väliaikaisesti poissa käytöstä', freeLabel: 'Vapaa', paidLabel: 'Maksullinen', unavailableLabel: 'Väliaikaisesti poissa käytöstä', upcomingException: 'Tuleva poikkeus', activeException: 'Voimassa oleva poikkeus', starts: 'Alkaa', ends: 'Päättyy', noTimeLimit: 'ei aikarajaa', limitUnknown: 'aikaraja ei tiedossa', scheduleUnknown: 'maksulliset ajat tarkistettava', banUnknown: 'kieltoajat tarkistettava', withDisc: 'kiekolla', assumedStay: 'paikkaluokan oletus', parkingClass: 'Paikkaluokka', banHours: 'Pysäköintikielto', stayHours: 'Aikaraja voimassa',
     mapLayers: 'Karttatasot', street: 'Kadunvarsipaikat', priceZones: 'Maksuvyöhykkeet', residentZones: 'Asukasvyöhykkeet', closures: 'Työt ja tapahtumat', removals: 'Siirtokehotukset',
     here: 'Tässä paikassa', tapHint: 'Napauta kartalta pysäköintipaikkaa', noMappedSpot: 'Ei tunnistettua pysäköintipaikkaa', noMappedSpotBody: 'Tälle pisteelle ei löytynyt avointa paikkatietoa. Tarkista aina liikennemerkki.',
-    paid: 'Maksullinen pysäköinti', free: 'Maksuton pysäköinti', disc: 'Kiekkopaikka', resident: 'Asukaspysäköinti', disabled: 'Invapaikka', loading: 'Kuormauspaikka', restricted: 'Rajoitettu pysäköinti',
+    paid: 'Maksullinen pysäköinti', free: 'Maksuton pysäköinti', disc: 'Kiekkopaikka', offPeak: 'Maksuton kieltoajan ulkopuolella', prohibited: 'Pysäköinti kielletty', disabled: 'Invapaikka', loading: 'Kuormauspaikka', taxi: 'Taksiasema', charging: 'Sähköauton latauspaikka', scooter: 'Sähköpotkulautapaikka', bicycle: 'Polkupyöräpaikka', motorcycle: 'Moottoripyöräpaikka', coach: 'Matkailuliikenteen paikka', permitOnly: 'Vain luvalla', restricted: 'Rajoitettu pysäköinti', unknown: 'Pysäköintitiedot puuttuvat',
     perHour: '/ tunti', freeNow: 'Maksuton nyt', paidNow: 'Maksullinen nyt', nextFree: 'Maksuton klo 21 jälkeen', saturdayFree: 'Maksuton klo 18 jälkeen', allDayFree: 'Maksuton koko päivän',
     hours: 'Maksulliset ajat', weekdays: 'Ma–pe', saturday: 'Lauantai', sunday: 'Sunnuntai', signException: 'Paikkakohtainen voimassaolo', zone: 'Maksuvyöhyke', residentArea: 'Asukasvyöhyke', permit: 'Asukastunnus', estimatedSpaces: 'Arvioitu paikkamäärä',
-    notices: 'Huomiot', closureActive: 'Työ tai tapahtuma alueella', closureBody: 'Lupa-alue leikkaa valitun pysäköintipaikan. Paikkoja voi olla tilapäisesti pois käytöstä.', removalActive: 'Siirtokehotus tämän paikan lähellä', removalBody: 'Kaupungin Siirtovahti näyttää siirtokehotuksen tällä katuosuudella.', removalPeriod: 'Voimassa', maintenanceUnavailable: 'Aura-ajoneuvojen live-syöte ei ole käytettävissä', maintenanceBody: 'Siirtokehotukset tarkistetaan kaupungin Siirtovahti-palvelusta. Kadulla oleva merkki ratkaisee.', officialRule: 'Palvelukartan virallinen kuvaus', officialRestriction: 'Pysäköinti kielletty', officialRestrictionHint: 'Virallinen rajoitus · tarkista liikennemerkki',
+    notices: 'Huomiot', closureActive: 'Työ tai tapahtuma alueella', closureBody: 'Lupa-alue leikkaa valitun pysäköintipaikan. Paikkoja voi olla tilapäisesti pois käytöstä.', removalActive: 'Siirtokehotus tämän paikan lähellä', removalBody: 'Kaupungin Siirtovahti näyttää siirtokehotuksen tällä katuosuudella.', removalPeriod: 'Voimassa', maintenanceUnavailable: 'Aura-ajoneuvojen live-syöte ei ole käytettävissä', maintenanceBody: 'Siirtokehotukset tarkistetaan kaupungin Siirtovahti-palvelusta. Kadulla oleva merkki ratkaisee.', officialRestriction: 'Pysäköinti kielletty', officialRestrictionHint: 'Virallinen rajoitus · tarkista liikennemerkki',
     nearby: 'Pysäköintihallit lähellä', parkingHall: 'Pysäköintihalli', live: 'Ajantasainen', open: 'Avoinna', closed: 'Suljettu', statusUnknown: 'Aukioloaika ei tiedossa', spaces: 'paikkaa vapaana', totalSpaces: 'Paikkoja yhteensä', priceUnavailable: 'Hinta ei tiedossa', forecast: 'Arvio 2 tunnin kuluttua', facilitiesLoading: 'Haetaan pysäköintihalleja…', facilitiesEmpty: 'Lähistöltä ei löytynyt pysäköintihalleja.', openingHours: 'Aukioloajat', operator: 'Ylläpitäjä', paymentMethods: 'Maksutavat', officialSite: 'Tarkista hinnat ja aukioloajat',
     sources: 'Tietolähteet', advisory: 'Liikennemerkki ratkaisee', disclaimer: 'Sivustolle kootut tiedot voivat olla vanhentuneita tai vääriä. Tarkista aina liikennemerkki ennen pysäköintiä',
     locate: 'Näytä sijaintini', refresh: 'Päivitä tiedot', close: 'Sulje', details: 'Tiedot', showList: 'Lähialueen hallit', dataUpdated: 'Tiedot päivitetty', dataUpdating: 'Päivitetään tietoja', spotCount: 'pysäköintipaikkaa kartalla', zoomIn: 'Lähennä karttaa nähdäksesi pysäköintipaikat', hour: 'Tunti', minute: 'Minuutti',
@@ -100,14 +101,14 @@ const copy = {
   },
   en: {
     appName: 'PARKKI', region: 'Helsinki', locating: 'Finding your location…', locationReady: 'Your location', locationFallback: 'Helsinki city centre',
-    when: 'Parking time', date: 'Date', time: 'Time', today: 'Today', now: 'Now', paidAtTime: 'Paid', freeAtTime: 'Free', paidUntil: 'Paid until', chargingStarts: 'Charging starts', maxStay: 'Maximum', mapHint: 'Choose a parking space on the map', detailsSummary: 'Details',
-    freeLegend: 'Free', freeLongLegend: 'Free', freeShortLegend: 'Free under 60 min', paidLegend: 'Paid', unavailableLegend: 'Unavailable', freeLabel: 'Free', paidLabel: 'Paid', unavailableLabel: 'Temporarily unavailable', upcomingException: 'Upcoming exception', activeException: 'Active exception', starts: 'Starts', ends: 'Ends', noTimeLimit: 'no time limit', limitUnknown: 'time limit unknown', scheduleUnknown: 'chargeable hours must be checked', withDisc: 'with parking disc',
+    when: 'Parking time', date: 'Date', time: 'Time', today: 'Today', now: 'Now', paidUntil: 'Paid until', chargingStarts: 'Charging starts', maxStay: 'Maximum', mapHint: 'Choose a parking space on the map', detailsSummary: 'Details',
+    freeLegend: 'Free', freeLongLegend: 'Free', freeShortLegend: 'Free, max 1 h', paidLegend: 'Paid', unavailableLegend: 'Unavailable', freeLabel: 'Free', paidLabel: 'Paid', unavailableLabel: 'Temporarily unavailable', upcomingException: 'Upcoming exception', activeException: 'Active exception', starts: 'Starts', ends: 'Ends', noTimeLimit: 'no time limit', limitUnknown: 'time limit unknown', scheduleUnknown: 'chargeable hours must be checked', banUnknown: 'no-parking hours must be checked', withDisc: 'with parking disc', assumedStay: 'assumed from the parking class', parkingClass: 'Parking class', banHours: 'No parking', stayHours: 'Time limit in force',
     mapLayers: 'Map layers', street: 'On-street spaces', priceZones: 'Payment zones', residentZones: 'Resident zones', closures: 'Works and events', removals: 'Relocation notices',
     here: 'At this location', tapHint: 'Tap a parking space on the map', noMappedSpot: 'No mapped parking space', noMappedSpotBody: 'Open data has no parking record for this point. Always check the street sign.',
-    paid: 'Paid parking', free: 'Free parking', disc: 'Time-limited parking', resident: 'Resident parking', disabled: 'Accessible parking', loading: 'Loading zone', restricted: 'Restricted parking',
+    paid: 'Paid parking', free: 'Free parking', disc: 'Time-limited parking', offPeak: 'Free outside the no-parking hours', prohibited: 'No parking', disabled: 'Accessible parking', loading: 'Loading zone', taxi: 'Taxi rank', charging: 'EV charging space', scooter: 'E-scooter parking', bicycle: 'Bicycle parking', motorcycle: 'Motorcycle parking', coach: 'Tourist coach space', permitOnly: 'Permit holders only', restricted: 'Restricted parking', unknown: 'Parking rules unavailable',
     perHour: '/ hour', freeNow: 'Free now', paidNow: 'Paid now', nextFree: 'Free after 21:00', saturdayFree: 'Free after 18:00', allDayFree: 'Free all day',
     hours: 'Chargeable hours', weekdays: 'Mon–Fri', saturday: 'Saturday', sunday: 'Sunday', signException: 'Space-specific validity', zone: 'Payment zone', residentArea: 'Resident zone', permit: 'Resident permit', estimatedSpaces: 'Estimated capacity',
-    notices: 'Advisories', closureActive: 'Works or event in this area', closureBody: 'The permit area overlaps the selected parking space. Spaces may be temporarily unavailable.', removalActive: 'Relocation notice near this space', removalBody: 'The City Siirtovahti service shows a relocation notice on this street section.', removalPeriod: 'Valid', maintenanceUnavailable: 'Live snow-plough positions are unavailable', maintenanceBody: 'Relocation notices are checked through the City Siirtovahti service. The street sign is final.', officialRule: 'Official Service Map description', officialRestriction: 'Parking prohibited', officialRestrictionHint: 'Official restriction · check the street sign',
+    notices: 'Advisories', closureActive: 'Works or event in this area', closureBody: 'The permit area overlaps the selected parking space. Spaces may be temporarily unavailable.', removalActive: 'Relocation notice near this space', removalBody: 'The City Siirtovahti service shows a relocation notice on this street section.', removalPeriod: 'Valid', maintenanceUnavailable: 'Live snow-plough positions are unavailable', maintenanceBody: 'Relocation notices are checked through the City Siirtovahti service. The street sign is final.', officialRestriction: 'Parking prohibited', officialRestrictionHint: 'Official restriction · check the street sign',
     nearby: 'Nearby parking facilities', parkingHall: 'Parking facility', live: 'Live', open: 'Open', closed: 'Closed', statusUnknown: 'Opening hours unavailable', spaces: 'spaces available', totalSpaces: 'Total spaces', priceUnavailable: 'Price unavailable', forecast: 'Estimate in 2 hours', facilitiesLoading: 'Finding parking facilities…', facilitiesEmpty: 'No parking facilities were found nearby.', openingHours: 'Opening hours', operator: 'Operator', paymentMethods: 'Payment methods', officialSite: 'Check prices and opening hours',
     sources: 'Data sources', advisory: 'Street signs are final', disclaimer: 'Information collected on this site may be outdated or incorrect. Always check the traffic sign before parking.',
     locate: 'Show my location', refresh: 'Refresh data', close: 'Close', details: 'Details', showList: 'Nearby facilities', dataUpdated: 'Data updated', dataUpdating: 'Updating data', spotCount: 'spaces on map', zoomIn: 'Zoom in to see parking spaces', hour: 'Hour', minute: 'Minute',
@@ -120,8 +121,8 @@ const sourceInfo = {
     title: 'Tietoa palvelusta',
     intro: 'Palvelu kokoaa avoimet pysäköintitiedot yhteen näkymään. Tiedot voivat olla puutteellisia tai vanhentuneita, joten liikennemerkki ratkaisee aina.',
     rows: [
-      { name: 'Kadunvarsipaikat ja pysäköintivyöhykkeet', detail: 'Helsingin kaupunki / Helsinki Region Infoshare: sijainti, pysäköintiluokka, aikaraja, voimassaolo sekä maksu- ja asukasvyöhykkeet.', href: 'https://hri.fi/data/fi/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
-      { name: 'Paikan virallinen kuvaus', detail: 'Helsingin Palvelukartta: valitun pysäköintipaikan virallinen kuvaus ja voimassaoloaika.', href: 'https://palvelukartta.hel.fi/' },
+      { name: 'Kadunvarsipaikat ja pysäköintivyöhykkeet', detail: 'Helsingin kaupunki / Helsinki Region Infoshare: sijainti, pysäköintiluokka, aikaraja, voimassaolo sekä maksu- ja asukasvyöhykkeet. Paikan luokka ratkaisee näytettävän kategorian, ja epäselvä aikaraja tulkitaan aina lyhimmän vaihtoehdon mukaan.', href: 'https://hri.fi/data/fi/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
+      { name: 'Paikan viralliset voimassaoloajat', detail: 'Helsingin Palvelukartta: valitun pysäköintipaikan viralliset voimassaoloajat ja mahdollinen pysäköintikielto.', href: 'https://palvelukartta.hel.fi/' },
       { name: 'Työt, tapahtumat ja siirtokehotukset', detail: 'Helsingin kaupungin avoin paikkatieto ja Siirtovahti.', href: 'https://siirtovahti.hel.fi/' },
       { name: 'Pysäköintihallit', detail: 'Helsingin Palvelukartta ja OpenStreetMap: sijainnit sekä saatavilla olevat hinta- ja aukiolotiedot. Hallikohtainen linkki vie ylläpitäjän ajantasaisiin tietoihin.', href: 'https://palvelukartta.hel.fi/' },
       { name: 'Taustakartta', detail: 'OpenStreetMapin karttatiedot ja CARTOn karttatiilet.', href: 'https://www.openstreetmap.org/copyright' },
@@ -133,8 +134,8 @@ const sourceInfo = {
     title: 'About this service',
     intro: 'The service combines open datasets into one parking view. Data can change, so the street sign is always authoritative.',
     rows: [
-      { name: 'On-street spaces and parking zones', detail: 'City of Helsinki / Helsinki Region Infoshare: location, parking class, time limit, validity, payment zones and resident zones.', href: 'https://hri.fi/data/en/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
-      { name: 'Official description', detail: 'Helsinki Service Map: the official description and validity of the selected parking space.', href: 'https://palvelukartta.hel.fi/en/' },
+      { name: 'On-street spaces and parking zones', detail: 'City of Helsinki / Helsinki Region Infoshare: location, parking class, time limit, validity, payment zones and resident zones. The class decides the category shown, and an unclear time limit is always read as the shortest option.', href: 'https://hri.fi/data/en/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
+      { name: 'Official validity', detail: 'Helsinki Service Map: the official validity period of the selected space and any parking prohibition.', href: 'https://palvelukartta.hel.fi/en/' },
       { name: 'Works, events and relocation notices', detail: 'City of Helsinki open spatial data and Siirtovahti.', href: 'https://siirtovahti.hel.fi/' },
       { name: 'Parking facilities', detail: 'Helsinki Service Map and OpenStreetMap: locations and available price and opening-hour data. Facility links lead to the operator’s current information.', href: 'https://palvelukartta.hel.fi/en/' },
       { name: 'Base map', detail: 'OpenStreetMap map data and CARTO map tiles.', href: 'https://www.openstreetmap.org/copyright' },
@@ -416,122 +417,34 @@ export function mergeFacilities(primary, fallback, limit = 30) {
   return merged.sort((a, b) => a.distance - b.distance).slice(0, limit);
 }
 
-function parseTimeRanges(value) {
-  const ranges = [];
-  const normalized = String(value || '').replace(/(\d{1,2})\s*\.\s*(\d{1,2})/g, '$1-$2');
-  const pattern = /(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?/g;
-  let match = pattern.exec(normalized);
-  while (match) {
-    const start = Number(match[1]) * 60 + Number(match[2] || 0);
-    const end = Number(match[3]) * 60 + Number(match[4] || 0);
-    if (start >= 0 && start < 1440 && end > 0 && end <= 1440) ranges.push({ start, end });
-    match = pattern.exec(normalized);
-  }
-  return ranges;
+function formatMinuteOfDay(minute) {
+  const hours = Math.floor(minute / 60);
+  const minutes = minute % 60;
+  return minutes ? `${hours}:${String(minutes).padStart(2, '0')}` : String(hours);
 }
 
-export function parseParkingValidity(value) {
-  const text = String(value || '').replace(/\s+/g, ' ').trim();
-  if (!text) return null;
-  if (/\d\s*\.\s*\d/.test(text)) return null;
-  const saturday = /\(([^)]*)\)/.exec(text);
-  if (saturday && !text.slice(0, saturday.index).trim().endsWith(',')) return null;
-  const weekdayRanges = parseTimeRanges(saturday ? text.slice(0, saturday.index) : text);
-  const saturdayRanges = saturday ? parseTimeRanges(saturday[1]) : [];
-  const sundayRanges = saturday ? parseTimeRanges(text.slice(saturday.index + saturday[0].length)) : [];
-  if (!weekdayRanges.length && !saturdayRanges.length && !sundayRanges.length) return null;
-  return { byDay: [sundayRanges, weekdayRanges, weekdayRanges, weekdayRanges, weekdayRanges, weekdayRanges, saturdayRanges], source: text };
+function formatRanges(ranges) {
+  return ranges.map((range) => `${formatMinuteOfDay(range.start)}–${formatMinuteOfDay(range.end)}`).join(', ');
 }
 
-function schedulePeriodAt(schedule, date) {
-  if (!schedule) return null;
-  const minute = date.getHours() * 60 + date.getMinutes();
-  const day = date.getDay();
-  const atMinutes = (dayOffset, value) => {
-    const result = new Date(date);
-    result.setHours(0, 0, 0, 0);
-    result.setDate(result.getDate() + dayOffset);
-    result.setMinutes(value);
-    return result;
-  };
-  for (const range of schedule.byDay[day]) {
-    if (range.end > range.start && minute >= range.start && minute < range.end) return { end: atMinutes(0, range.end) };
-    if (range.end <= range.start && minute >= range.start) return { end: atMinutes(1, range.end) };
-  }
-  const previousDay = (day + 6) % 7;
-  for (const range of schedule.byDay[previousDay]) {
-    if (range.end <= range.start && minute < range.end) return { end: atMinutes(0, range.end) };
-  }
-  return null;
+// The hours that apply on the given day only, for the compact one-line label.
+// Empty when the day carries no hours at all, so the caller states nothing
+// rather than implying the restriction is lifted.
+export function formatValidityOnDay(value, date, lang = 'fi') {
+  const schedule = parseParkingValidity(value);
+  const ranges = schedule?.byDay[date.getDay()] || [];
+  if (!ranges.length) return '';
+  return `${lang === 'fi' ? 'klo ' : ''}${formatRanges(ranges)}`;
 }
 
 export function formatParkingValidity(value, lang = 'fi') {
   const schedule = parseParkingValidity(value);
   if (!schedule) return '';
-  const formatMinute = (minute) => {
-    const hours = Math.floor(minute / 60);
-    const minutes = minute % 60;
-    return minutes ? `${hours}:${String(minutes).padStart(2, '0')}` : String(hours);
-  };
-  const formatRanges = (ranges) => ranges.map((range) => `${formatMinute(range.start)}–${formatMinute(range.end)}`).join(', ');
   const rows = [];
   if (schedule.byDay[1].length) rows.push(`${lang === 'fi' ? 'Ma–pe' : 'Mon–Fri'} ${formatRanges(schedule.byDay[1])}`);
   if (schedule.byDay[6].length) rows.push(`${lang === 'fi' ? 'la' : 'Sat'} ${formatRanges(schedule.byDay[6])}`);
   if (schedule.byDay[0].length) rows.push(`${lang === 'fi' ? 'su' : 'Sun'} ${formatRanges(schedule.byDay[0])}`);
   return rows.join(' · ');
-}
-
-export function parkingNowStatus(zoneNumber, date = new Date(), validity = '') {
-  const schedule = parseParkingValidity(validity);
-  if (schedule) {
-    const period = schedulePeriodAt(schedule, date);
-    return { paid: Boolean(period), key: period ? 'paidNow' : 'freeNow', hours: formatParkingValidity(validity), end: period?.end || null };
-  }
-  if (String(validity || '').trim()) return { paid: false, unknown: true, key: 'unknown', hours: null, end: null };
-  if (!zoneNumber) return { paid: false, key: 'freeNow', hours: null, end: null };
-  const day = date.getDay();
-  const hour = date.getHours() + date.getMinutes() / 60;
-  if (day === 0) return { paid: false, key: 'allDayFree', hours: null, end: null };
-  if (day === 6) {
-    const paid = hour >= 9 && hour < 18;
-    const end = new Date(date); end.setHours(18, 0, 0, 0);
-    return { paid, key: paid ? 'paidNow' : 'saturdayFree', hours: '09–18', end: paid ? end : null };
-  }
-  const paid = hour >= 9 && hour < 21;
-  const end = new Date(date); end.setHours(21, 0, 0, 0);
-  return { paid, key: paid ? 'paidNow' : 'nextFree', hours: '09–21', end: paid ? end : null };
-}
-
-export function nextPaidStart(zoneNumber, date = new Date(), validity = '') {
-  const status = parkingNowStatus(zoneNumber, date, validity);
-  if (status.paid) return null;
-  const schedule = parseParkingValidity(validity);
-  if (schedule) {
-    let next = null;
-    for (let offset = 0; offset <= 7; offset += 1) {
-      const day = new Date(date);
-      day.setHours(0, 0, 0, 0);
-      day.setDate(day.getDate() + offset);
-      for (const range of schedule.byDay[day.getDay()]) {
-        const candidate = new Date(day);
-        candidate.setMinutes(range.start);
-        if (candidate > date && (!next || candidate < next)) next = candidate;
-      }
-    }
-    return next;
-  }
-  if (!zoneNumber) return null;
-  for (let offset = 0; offset <= 7; offset += 1) {
-    const candidate = new Date(date);
-    candidate.setDate(candidate.getDate() + offset);
-    candidate.setHours(9, 0, 0, 0);
-    if (candidate.getDay() !== 0 && candidate.getTime() > date.getTime()) return candidate;
-  }
-  return null;
-}
-
-function paidPeriodEnd(zoneNumber, date = new Date(), validity = '') {
-  return parkingNowStatus(zoneNumber, date, validity).end;
 }
 
 function formatPaymentTransition(value, reference, lang) {
@@ -604,17 +517,6 @@ export function parkingTimeStepDisabled(current, deltaMinutes, minimum, maximum)
   return next < minimum.getTime() || next > maximum.getTime();
 }
 
-export function parkingDurationMinutes(value) {
-  const text = String(value || '').trim().toLowerCase().replace(',', '.');
-  if (!text) return null;
-  if (/ei\s+aikaraj/.test(text)) return Infinity;
-  const hours = text.match(/(\d+(?:\.\d+)?)\s*(?:h|t(?:unti(?:a)?)?)(?:\b|$)/);
-  const minutes = text.match(/(\d+)\s*min(?:uut(?:ti|tia))?(?:\b|$)/);
-  if (!hours && !minutes && /^\d+$/.test(text)) return Number(text) * 60;
-  if (!hours && !minutes) return null;
-  return Math.round((hours ? Number(hours[1]) * 60 : 0) + (minutes ? Number(minutes[1]) : 0));
-}
-
 function formatParkingDeadline(value, reference, lang) {
   const sameDay = value.getFullYear() === reference.getFullYear() && value.getMonth() === reference.getMonth() && value.getDate() === reference.getDate();
   const clock = `${value.getHours()}:${String(value.getMinutes()).padStart(2, '0')}`.replace(':00', '');
@@ -668,63 +570,102 @@ export function parkingExceptions(feature, date, closures = [], notices = []) {
     .sort((a, b) => (a.active === b.active ? a.start - b.start : a.active ? -1 : 1));
 }
 
-export function parkingPolygonState(feature, zone, date, closures = [], notices = [], lang = 'fi') {
+// Adds the localised category name to the rules in ./parking-rules.js.
+export function spotMeta(feature, zoneNumber, lang = 'fi') {
+  const labels = copy[lang] || copy.fi;
+  const classification = classifyParkingSpot(feature, zoneNumber);
+  return { ...classification, label: labels[classification.kind] || labels.unknown };
+}
+
+function untilText(deadline, lang) {
+  return lang === 'fi' ? `${deadline} asti` : `until ${deadline}`;
+}
+
+// On a free or disc space `voimassaolo` is the window the time limit applies in,
+// not a chargeable period. Naming the window alongside the limit says everything
+// the data holds without asserting the limit lifts outside it — the city does not
+// publish that, and the sign is what the driver answers to.
+function stayText(meta, date, labels, lang) {
+  if (meta.maxStayMinutes === null) return labels.limitUnknown;
+  if (!Number.isFinite(meta.maxStayMinutes)) return labels.noTimeLimit;
+  const limit = `${labels.maxStay.toLowerCase()} ${formatStayMinutes(meta.maxStayMinutes)}`;
+  if (meta.kind !== 'free' && meta.kind !== 'disc') return limit;
+  const window = formatValidityOnDay(meta.validity, date, lang);
+  if (!window) return limit;
+  return lang === 'fi' ? `${limit} ${window}` : `${limit}, ${window}`;
+}
+
+function freeState(meta, date, labels, lang, chargingStartsAt = null) {
+  const status = meta.maxStayMinutes === null || meta.maxStayMinutes <= SHORT_STAY_MINUTES ? 'freeShort' : 'freeLong';
+  const headline = meta.kind === 'disc' ? `${labels.freeLegend} ${labels.withDisc}` : labels.freeLegend;
+  const deadline = chargingStartsAt ? untilText(formatParkingDeadline(chargingStartsAt, date, lang), lang) : '';
+  return {
+    status,
+    headline,
+    note: [deadline, stayText(meta, date, labels, lang)].filter(Boolean).join(' · '),
+    transition: chargingStartsAt ? { kind: 'chargingStarts', at: chargingStartsAt } : null,
+    nextPaidAt: chargingStartsAt,
+  };
+}
+
+function paidState(meta, zone, date, labels, lang) {
+  const price = meta.price ? `${meta.price} €/h` : labels.paidLabel;
+  if (!parseParkingValidity(meta.validity)) {
+    return { status: 'paid', headline: price, note: labels.scheduleUnknown, transition: null, scheduleUnknown: true };
+  }
+  const payment = parkingNowStatus(zone, date, meta.validity);
+  if (!payment.paid) return freeState(meta, date, labels, lang, nextPaidStart(zone, date, meta.validity));
+  const paidUntil = payment.end;
+  return {
+    status: 'paid',
+    headline: price,
+    note: paidUntil ? untilText(formatParkingDeadline(paidUntil, date, lang), lang) : '',
+    transition: paidUntil ? { kind: 'paidUntil', at: paidUntil } : null,
+    until: paidUntil?.getTime() || null,
+  };
+}
+
+// Class 9 inverts the meaning of `voimassaolo`: the hours listed are when
+// parking is forbidden, not when it costs money. Outside them the space is free.
+function offPeakState(meta, date, labels, lang) {
+  const ban = parseParkingValidity(meta.validity);
+  if (!ban) return { status: 'unavailable', headline: labels.prohibited, note: labels.banUnknown, transition: null };
+  const period = schedulePeriodAt(ban, date);
+  if (!period) return freeState(meta, date, labels, lang, nextScheduleStart(ban, date));
+  return {
+    status: 'unavailable',
+    headline: labels.prohibited,
+    note: untilText(formatParkingDeadline(period.end, date, lang), lang),
+    transition: { kind: 'ends', at: period.end },
+    until: period.end.getTime(),
+  };
+}
+
+// Single source of truth for how one space reads at one moment. The map layer
+// and the detail panel both render from this, so they can never disagree.
+export function parkingSpotState(feature, zone, date, exceptions = [], lang = 'fi') {
   const labels = copy[lang] || copy.fi;
   const meta = spotMeta(feature, zone, lang);
-  const exceptions = parkingExceptions(feature, date, closures, notices);
   const active = exceptions.find((exception) => exception.active);
-  const upcoming = exceptions.some((exception) => !exception.active);
-  if (active) {
-    const deadline = Number.isFinite(active.end) ? formatParkingDeadline(new Date(active.end), date, lang) : '';
-    const label = deadline ? `${labels.unavailableLabel} · ${lang === 'fi' ? `${deadline} asti` : `until ${deadline}`}` : labels.unavailableLabel;
-    return { status: 'unavailable', label, until: active.end, hasUpcoming: upcoming, exceptions, meta };
-  }
-  if (['restricted', 'disabled', 'loading'].includes(meta.kind)) return { status: 'unavailable', label: meta.label, until: null, hasUpcoming: upcoming, exceptions, meta };
-  const duration = feature?.properties?.kesto || '';
-  const durationMinutes = parkingDurationMinutes(duration);
-  const validity = feature?.properties?.voimassaolo || '';
-  const paidKind = ['paid', 'resident'].includes(meta.kind);
-  const scheduleUnknown = paidKind && !parseParkingValidity(validity);
-  if (scheduleUnknown) {
-    const price = meta.price ? `${meta.price} €/h` : labels.paidAtTime;
-    return { status: 'paid', label: `${price} · ${labels.scheduleUnknown}`, until: null, hasUpcoming: upcoming, exceptions, meta, scheduleUnknown: true };
-  }
-  const payment = parkingNowStatus(zone, date, validity);
-  if (paidKind && payment.paid) {
-    const paidUntil = paidPeriodEnd(zone, date, validity);
-    const deadline = paidUntil ? formatParkingDeadline(paidUntil, date, lang) : '';
-    const price = meta.price ? `${meta.price} €/h` : labels.paidLabel;
-    return { status: 'paid', label: deadline ? `${price} · ${lang === 'fi' ? `${deadline} asti` : `until ${deadline}`}` : price, until: paidUntil?.getTime() || null, hasUpcoming: upcoming, exceptions, meta };
-  }
-  const nextPaidAt = paidKind ? nextPaidStart(zone, date, validity) : null;
-  const status = durationMinutes !== null && durationMinutes < 60 ? 'freeShort' : 'freeLong';
-  const label = nextPaidAt ? `${labels.freeLegend} · ${lang === 'fi' ? `${formatParkingDeadline(nextPaidAt, date, lang)} asti` : `until ${formatParkingDeadline(nextPaidAt, date, lang)}`}`
-    : durationMinutes === Infinity ? `${labels.freeLegend} · ${labels.noTimeLimit}`
-      : duration ? (meta.kind === 'disc' ? `${duration} ${labels.withDisc}` : `${labels.freeLegend} · ${labels.maxStay.toLowerCase()} ${duration}`)
-        : `${labels.freeLegend}${meta.kind === 'disc' ? ` ${labels.withDisc}` : ''} · ${labels.limitUnknown}`;
-  return { status, label, until: null, nextPaidAt, hasUpcoming: upcoming, exceptions, meta, durationMinutes };
+  const base = { until: null, nextPaidAt: null, transition: null, hasUpcoming: exceptions.some((exception) => !exception.active), exceptions, meta };
+  const state = active
+    ? {
+      status: 'unavailable',
+      headline: labels.unavailableLabel,
+      note: Number.isFinite(active.end) ? untilText(formatParkingDeadline(new Date(active.end), date, lang), lang) : '',
+      transition: Number.isFinite(active.end) ? { kind: 'ends', at: new Date(active.end) } : null,
+      until: active.end,
+    }
+    : !PARKABLE_KINDS.has(meta.kind) ? { status: 'unavailable', headline: meta.label, note: '' }
+      : meta.kind === 'offPeak' ? offPeakState(meta, date, labels, lang)
+        : meta.kind === 'paid' ? paidState(meta, zone, date, labels, lang)
+          : freeState(meta, date, labels, lang);
+  const merged = { ...base, ...state };
+  return { ...merged, label: [merged.headline, merged.note].filter(Boolean).join(' · ') };
 }
 
-export function spotMeta(feature, zoneNumber, lang = 'fi') {
-  const p = feature?.properties || {};
-  const klass = Number(p.luokka);
-  const type = String(p.tyyppi || '').toLowerCase();
-  const residentCode = p.asukaspysakointitunnus || '';
-  let kind = 'restricted';
-  if (type.includes('inva')) kind = 'disabled';
-  else if (type.includes('kuormaus')) kind = 'loading';
-  else if (residentCode) kind = 'resident';
-  else if ([1, 2].includes(klass)) kind = 'free';
-  else if (klass === 8) kind = 'disc';
-  else if ([3, 4, 5, 6, 7, 10].includes(klass)) kind = 'paid';
-  else if (klass === 9) kind = 'restricted';
-  const price = kind === 'paid' || kind === 'resident' ? (Number(zoneNumber) === 1 ? 4 : Number(zoneNumber) === 2 ? 2 : null) : 0;
-  const labels = copy[lang] || copy.fi;
-  return { kind, label: labels[kind], price, residentCode, validity: p.voimassaolo || '', estimated: p.paikat_ala || null, rawLabel: p.luokka_nimi || '' };
-}
-
-export function isGeneralParkingFeature(feature) {
-  return !['restricted', 'loading', 'disabled'].includes(spotMeta(feature, null).kind);
+export function parkingPolygonState(feature, zone, date, closures = [], notices = [], lang = 'fi') {
+  return parkingSpotState(feature, zone, date, parkingExceptions(feature, date, closures, notices), lang);
 }
 
 export function parkingAreaLabel(feature, areaType, lang = 'fi') {
@@ -920,7 +861,7 @@ function SourcePanel({ lang, onClose }) {
   </div>;
 }
 
-function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTime, onClose }) {
+export function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTime, onClose }) {
   const t = copy[lang];
   if (!selected) return null;
   const { meta, zone, resident } = selected;
@@ -928,29 +869,23 @@ function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTime, onC
   const locale = lang === 'fi' ? 'fi-FI' : 'en-GB';
   const selectedDate = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(parkingTime);
   const selectedTime = `${selectedDate} · ${dateTimeInputValue(parkingTime).slice(11, 16)}`;
-  const status = parkingNowStatus(zone, parkingTime, meta.validity);
-  const activeException = exceptions.find((exception) => exception.active);
+  const state = parkingSpotState(selected.feature, zone, parkingTime, exceptions, lang);
   const officialRestriction = hasOfficialParkingRestriction(serviceMap);
-  const paidKind = ['paid', 'resident'].includes(meta.kind);
-  const scheduleUnknown = paidKind && !parseParkingValidity(meta.validity);
-  const isPaid = !activeException && paidKind && !scheduleUnknown && status.paid;
-  const cardState = activeException || officialRestriction ? 'unavailable' : isPaid || scheduleUnknown ? 'paid' : 'free';
-  const nextPaidAt = !isPaid && !scheduleUnknown && paidKind ? nextPaidStart(zone, parkingTime, meta.validity) : null;
-  const paidUntil = isPaid ? paidPeriodEnd(zone, parkingTime, meta.validity) : null;
-  const duration = selected.feature?.properties?.kesto || '';
-  const permit = String(meta.residentCode || resident || '').trim();
-  const hasPermit = permit && permit !== '0';
-  const headline = officialRestriction ? t.officialRestriction : activeException ? t.unavailableLabel : (isPaid || scheduleUnknown) && meta.price ? `${meta.price} €/h` : isPaid || scheduleUnknown ? t.paidAtTime : t.freeAtTime;
+  const cardState = officialRestriction ? 'unavailable' : state.status === 'paid' ? 'paid' : state.status === 'unavailable' ? 'unavailable' : 'free';
+  const permit = parkingPermitCode(meta.permit || resident);
+  const stay = Number.isFinite(meta.maxStayMinutes) ? formatStayMinutes(meta.maxStayMinutes) : meta.maxStayMinutes === null ? '' : t.noTimeLimit;
+  const headline = officialRestriction ? t.officialRestriction : state.headline;
   const transition = officialRestriction ? t.officialRestrictionHint
-    : Number.isFinite(activeException?.end) ? formatParkingCardTransition('ends', new Date(activeException.end), parkingTime, lang)
-    : scheduleUnknown ? t.scheduleUnknown
-    : paidUntil ? formatParkingCardTransition('paidUntil', paidUntil, parkingTime, lang)
-      : nextPaidAt ? formatParkingCardTransition('chargingStarts', nextPaidAt, parkingTime, lang)
-        : duration ? `${t.maxStay} ${duration}` : '';
-  const showDurationFact = Boolean(duration && (officialRestriction || activeException || scheduleUnknown || paidUntil || nextPaidAt));
-  const hasKeyFacts = showDurationFact || hasPermit;
-  const hasDetails = Boolean(zone || meta.validity || serviceMap?.name?.[lang]);
+    : state.transition ? formatParkingCardTransition(state.transition.kind, state.transition.at, parkingTime, lang)
+      : state.note;
+  const hasKeyFacts = Boolean(stay || permit);
   const scheduleLabel = serviceMap?.extra?.validity_period || formatParkingValidity(meta.validity, lang);
+  const showChargeableHours = meta.kind === 'paid' && Boolean(scheduleLabel);
+  const showBanHours = meta.kind === 'offPeak' && Boolean(scheduleLabel);
+  // Read from the layer rather than the Service Map's own wording, so the row
+  // can never contradict the window named in the summary line.
+  const stayHoursLabel = ['free', 'disc'].includes(meta.kind) ? formatParkingValidity(meta.validity, lang) : '';
+  const hasDetails = Boolean(zone || showChargeableHours || showBanHours || stayHoursLabel || meta.rawLabel);
   return (
     <section className="place-card">
       <button className="panel-close" onClick={onClose} aria-label={t.close}><X size={17} /></button>
@@ -960,8 +895,8 @@ function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTime, onC
         {transition && <p>{transition}</p>}
       </div>
       {hasKeyFacts && <dl className="card-key-facts">
-        {showDurationFact && <div><dt>{t.maxStay}</dt><dd>{duration}</dd></div>}
-        {hasPermit && <div><dt>{t.permit}</dt><dd>{permit}</dd></div>}
+        {stay && <div><dt>{t.maxStay}</dt><dd>{stay}{meta.maxStayAssumed ? <small> · {t.assumedStay}</small> : null}</dd></div>}
+        {permit && <div><dt>{t.permit}</dt><dd>{permit}</dd></div>}
       </dl>}
       {exceptions.length > 0 && <div className="notices">
           {exceptions.slice(0, 3).map((exception) => <div className={`notice ${exception.active ? 'danger' : 'upcoming'}`} key={`${exception.kind}-${exception.id}-${exception.start}`}><AlertTriangle size={16} /><span><strong>{exception.active ? t.activeException : `! ${t.upcomingException}`}</strong><small>{exception.title}{exception.detail ? ` · ${exception.detail}` : ''}<br />{formatExceptionPeriod(exception, lang)}</small></span></div>)}
@@ -970,8 +905,10 @@ function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTime, onC
         <summary>{t.detailsSummary}<ChevronDown size={15} /></summary>
         <div className="detail-rows">
           {zone && <div><span>{t.zone}</span><strong>{zone}</strong></div>}
-          {['paid', 'resident'].includes(meta.kind) && scheduleLabel && <div><span>{t.hours}</span><strong>{scheduleLabel}</strong></div>}
-          {serviceMap?.name?.[lang] && <div><span>{t.officialRule}</span><strong>{serviceMap.name[lang]}{serviceMap.extra?.validity_period ? ` · ${serviceMap.extra.validity_period}` : ''}</strong></div>}
+          {showChargeableHours && <div><span>{t.hours}</span><strong>{scheduleLabel}</strong></div>}
+          {showBanHours && <div><span>{t.banHours}</span><strong>{scheduleLabel}</strong></div>}
+          {stayHoursLabel && <div><span>{t.stayHours}</span><strong>{stayHoursLabel}</strong></div>}
+          {meta.rawLabel && <div><span>{t.parkingClass}</span><strong>{meta.rawLabel}</strong></div>}
         </div>
       </details>}
     </section>
@@ -1552,6 +1489,7 @@ const clarityStyles = `
   .card-key-facts>div+div{padding-left:12px;border-left:1px solid var(--line)}
   .card-key-facts dt{margin:0;color:#69726c;font-size:var(--type-caption);font-weight:650;line-height:1.25}
   .card-key-facts dd{margin:3px 0 0;color:var(--ink);font-size:var(--type-label);font-weight:750;line-height:1.2}
+  .card-key-facts dd small{color:#69726c;font-size:var(--type-caption);font-weight:600}
   .notice strong,.detail-disclosure summary,.detail-rows>div{font-size:var(--type-body)}
   .notice small{font-size:var(--type-caption)}
   .detail-disclosure summary{min-height:44px;padding:10px 1px}

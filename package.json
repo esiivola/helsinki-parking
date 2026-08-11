@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build --base=./",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "audit:parking": "node scripts/audit-parking-classes.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
