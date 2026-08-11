@@ -851,12 +851,12 @@ function SourcePanel({ lang, onClose }) {
     <section className="source-panel" role="dialog" aria-modal="true" aria-labelledby="source-title" onMouseDown={(event) => event.stopPropagation()}>
       <button className="panel-close" onClick={onClose} aria-label={closeLabel}><X size={18} /></button>
       <div className="source-heading"><Info size={18} /><h2 id="source-title">{info.title}</h2></div>
+      <div className="source-maker"><span>{info.maker}</span><a href="https://esiivola.github.io" target="_blank" rel="noreferrer">esiivola.github.io <ExternalLink size={14} /></a></div>
       <p className="source-intro">{info.intro}</p>
       <div className="source-list">{info.rows.map((row) => <a href={row.href} target="_blank" rel="noreferrer" key={row.name}>
         <span><strong>{row.name}</strong><small>{row.detail}</small></span><ExternalLink size={15} />
       </a>)}</div>
       <p className="source-licence">{info.licence}</p>
-      <div className="source-maker"><span>{info.maker}</span><a href="https://esiivola.github.io" target="_blank" rel="noreferrer">esiivola.github.io <ExternalLink size={14} /></a></div>
     </section>
   </div>;
 }
@@ -1507,7 +1507,7 @@ const clarityStyles = `
   .source-heading{min-height:34px;display:flex;align-items:center;gap:9px;padding-right:44px}.source-heading svg{color:#2457d6}.source-heading h2{margin:0;font-size:var(--type-display);line-height:1.15;letter-spacing:-.025em}
   .source-intro{margin:11px 44px 17px 0;color:#59625c;font-size:var(--type-body);line-height:1.5}
   .source-list{border-top:1px solid var(--line)}.source-list>a{min-height:66px;display:flex;align-items:center;gap:14px;padding:11px 2px;border-bottom:1px solid var(--line);color:inherit;text-decoration:none}.source-list>a:hover,.source-list>a:focus-visible{color:#2457d6;outline:0}.source-list>a>span{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}.source-list strong{font-size:var(--type-body);line-height:1.3}.source-list small{color:#68716b;font-size:var(--type-caption);line-height:1.4}.source-list>a>svg{flex:0 0 auto;color:#7b837d}
-  .source-licence{margin:14px 0;color:#737b75;font-size:var(--type-caption);line-height:1.45}.source-maker{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:13px;border-top:1px solid var(--line);font-size:var(--type-body)}.source-maker span{color:#68716b}.source-maker a{display:flex;align-items:center;gap:5px;color:#2457d6;font-weight:750;text-decoration:none}
+  .source-licence{margin:14px 0 0;color:#737b75;font-size:var(--type-caption);line-height:1.45}.source-maker{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px;padding-bottom:13px;border-bottom:1px solid var(--line);font-size:var(--type-body)}.source-maker span{color:#68716b}.source-maker a{display:flex;align-items:center;gap:5px;color:#2457d6;font-weight:750;text-decoration:none}
   @media(max-width:760px){
     .topbar{height:60px;gap:6px;padding:8px}
     .time-control{height:44px;padding:0 9px}
