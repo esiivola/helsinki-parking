@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, facilityAreaKey, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isReferenceSnapshotUsable, mergeFacilities, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingExceptions, parkingFeatureAt, parkingPolygonState, parkingPolygonStyle, parkingTimeStepDisabled, pointInFeature, pointToLineDistance, readJsonCache, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldReuseParkingSpotCache, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers, writeJsonCache } from './main.jsx';
+import { DEFAULT_MAP_ZOOM, ceilToFiveMinutes, closureActiveAt, compactFacilityPrice, dateTimeInputValue, facilityAreaKey, featuresOverlap, formatParkingCardTransition, formatParkingValidity, formatPaymentMethods, hasOfficialParkingRestriction, haversine, isReferenceSnapshotUsable, isVantaaManifestStale, isVantaaManifestUsable, isVantaaTileUsable, mergeFacilities, noticeActiveAt, osmFacilities, parkingAreaLabel, parkingExceptions, parkingFeatureAt, parkingPolygonState, parkingPolygonStyle, parkingSpotLoadStatus, parkingTimeStepDisabled, pointInFeature, pointToLineDistance, readJsonCache, serviceMapFacilities, setParkingDatePart, setParkingTimePart, shouldLoadParkingSpots, shouldReuseParkingSpotCache, shouldShowFacilityMarker, shouldShowLocationMarker, shouldShowParkingZoomHint, siirtovahtiFeatures, spotMeta, visibleFacilityMarkers, writeJsonCache } from './main.jsx';
 import { classifyParkingSpot, formatStayMinutes, isGeneralParkingFeature, nextPaidStart, parkingDurationMinutes, parkingNowStatus, parkingPermitCode, parkingTypeKind, parseParkingValidity, spotMaxStay, PARKING_CLASS_RULES } from './parking-rules.js';
 
 describe('parking map helpers', () => {
@@ -33,7 +33,8 @@ describe('parking map helpers', () => {
     expect(allWeek.byDay[6]).toEqual([{ start: 540, end: 1260 }]);
     expect(allWeek.byDay[0]).toEqual([{ start: 540, end: 1260 }]);
     expect(formatParkingValidity('9-21, (9-18)', 'fi')).toBe('Ma–pe 9–21 · la 9–18');
-    expect(parseParkingValidity('9-21 (9-18)')).toBeNull();
+    // The comma-less variant reads the same; a period (possible date) does not.
+    expect(parseParkingValidity('9-21 (9-18)').byDay[6]).toEqual([{ start: 540, end: 1080 }]);
     expect(parseParkingValidity('9.21, (9-18)')).toBeNull();
   });
 
@@ -119,7 +120,7 @@ describe('parking map helpers', () => {
   it('does not infer free parking when paid-space hours are missing or malformed', () => {
     const date = new Date(2026, 7, 8, 12, 0);
     const missing = parkingPolygonState({ properties: { luokka: 5 } }, '1', date, [], [], 'fi');
-    const malformed = parkingPolygonState({ properties: { luokka: 5, voimassaolo: '9-21 (9-18)' } }, '1', date, [], [], 'fi');
+    const malformed = parkingPolygonState({ properties: { luokka: 5, voimassaolo: '7-15, Maksullinen (9-18)' } }, '1', date, [], [], 'fi');
     expect([missing.status, missing.label]).toEqual(['paid', '4 €/h · maksulliset ajat tarkistettava']);
     expect([malformed.status, malformed.label]).toEqual(['paid', '4 €/h · maksulliset ajat tarkistettava']);
   });
@@ -137,6 +138,30 @@ describe('parking map helpers', () => {
     expect([long.status, long.label]).toEqual(['freeLong', 'Maksuton kiekolla · enintään 2 h']);
     expect([unlimited.status, unlimited.label]).toEqual(['freeLong', 'Maksuton · ei aikarajaa']);
     expect([unknown.status, unknown.label]).toEqual(['freeShort', 'Maksuton · enintään 1 h']);
+  });
+
+  it('applies provider day-specific stay limits at the selected time', () => {
+    const schedule = (days, start, end) => ({ byDay: Array.from({ length: 7 }, (_, day) => days.includes(day) ? [{ start, end }] : []) });
+    const feature = { properties: { parking: {
+      kind: 'disc', municipality: 'vantaa', maxStayMinutes: null,
+      stayRules: [
+        { maxStayMinutes: 30, schedule: schedule([1, 2, 3, 4, 5], 360, 540) },
+        { maxStayMinutes: 120, schedule: schedule([1, 2, 3, 4, 5], 540, 900) },
+        { maxStayMinutes: 30, schedule: schedule([1, 2, 3, 4, 5], 900, 1080) },
+      ],
+    } } };
+    expect(parkingPolygonState(feature, null, new Date(2026, 7, 10, 8, 0), [], [], 'fi').meta.maxStayMinutes).toBe(30);
+    expect(parkingPolygonState(feature, null, new Date(2026, 7, 10, 10, 0), [], [], 'fi').meta.maxStayMinutes).toBe(120);
+
+    const espoo = { properties: { parking: {
+      kind: 'free', municipality: 'espoo', maxStayMinutes: null,
+      stayRules: [
+        { maxStayMinutes: 240, schedule: schedule([1, 2, 3, 4, 5], 360, 1080) },
+        { maxStayMinutes: 120, schedule: schedule([6], 540, 900) },
+      ],
+    } } };
+    expect(parkingPolygonState(espoo, null, new Date(2026, 7, 10, 12, 0), [], [], 'fi').meta.maxStayMinutes).toBe(240);
+    expect(parkingPolygonState(espoo, null, new Date(2026, 7, 15, 12, 0), [], [], 'fi').meta.maxStayMinutes).toBe(120);
   });
 
   it('reads class 9 hours as a no-parking window rather than chargeable hours', () => {
@@ -349,14 +374,45 @@ describe('parking map helpers', () => {
     expect(mergeFacilities(liipi, osm)).toHaveLength(2);
   });
 
-  it('normalizes Service Map halls and excludes explicitly outdoor parking areas', () => {
+  it('deduplicates prefixed Service Map and LIIPI names at the same facility', () => {
+    const liipi = [{ id: 1, name: 'Perkkaantie', point: [60.221, 24.81], distance: 10, capacity: 100, source: 'liipi' }];
+    const serviceMap = [{ id: 2, name: 'Pysäköintialue Perkkaantie', point: [60.22101, 24.81001], distance: 11, website: 'https://example.test', source: 'service-map' }];
+    const merged = mergeFacilities(liipi, serviceMap);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({ name: 'Perkkaantie', capacity: 100, website: 'https://example.test' });
+  });
+
+  it('deduplicates close cross-source station aliases with a minor spelling difference', () => {
+    const liipi = [{ id: 439, name: 'Koivuhovin seisake', point: [60.206628, 24.70185], distance: 10, capacity: 50, source: 'liipi' }];
+    const serviceMap = [{ id: 53531, name: 'Koivuohovin aseman liityntäpysäköinti', point: [60.206585, 24.70216], distance: 12, website: 'https://example.test/koivuhovi', source: 'service-map' }];
+    const merged = mergeFacilities(liipi, serviceMap);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({ id: 439, capacity: 50, website: 'https://example.test/koivuhovi' });
+  });
+
+  it('deduplicates close cross-source facilities with a distinctive shared place token', () => {
+    const liipi = [{ id: 619, name: 'Kauppakeskus Ruoholahti', point: [60.16397, 24.911505], distance: 10, source: 'liipi' }];
+    const serviceMap = [{ id: 67613, name: 'EuroPark, P-Ruoholahti, Porkkalankatu 20', point: [60.164124, 24.911594], distance: 12, price: '3 €/h', source: 'service-map' }];
+    const merged = mergeFacilities(liipi, serviceMap);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({ id: 619, price: '3 €/h' });
+  });
+
+  it('keeps separately numbered lots distinct even when they are close', () => {
+    const liipi = [{ id: 1, name: 'Koivukylänväylä P1', point: [60.323, 25.04], distance: 10, source: 'liipi' }];
+    const serviceMap = [{ id: 2, name: 'Koivukylänväylä P2', point: [60.3231, 25.0401], distance: 12, source: 'service-map' }];
+    expect(mergeFacilities(liipi, serviceMap)).toHaveLength(2);
+  });
+
+  it('normalizes regional Service Map halls and outdoor parking areas', () => {
     const origin = [60.17, 24.94];
     const facilities = serviceMapFacilities({ results: [
       { id: 1, name: { fi: 'Marketparkki' }, short_description: { fi: 'Parkkihalli on auki 24/7.' }, location: { coordinates: [24.941, 60.171] }, www: { fi: 'https://example.test/halli' }, organizer_name: 'Testi Oy' },
-      { id: 2, name: { fi: 'Ulkopaikka' }, short_description: { fi: 'Ulkoalue' }, location: { coordinates: [24.942, 60.172] } },
+      { id: 2, name: { fi: 'Ulkopaikka' }, short_description: { fi: 'Ulkoalue, paikkamäärä 25' }, location: { coordinates: [24.942, 60.172] } },
     ] }, origin, 'fi');
-    expect(facilities).toHaveLength(1);
+    expect(facilities).toHaveLength(2);
     expect(facilities[0]).toMatchObject({ name: 'Marketparkki', openingHours: '24/7', website: 'https://example.test/halli', operator: 'Testi Oy', source: 'service-map' });
+    expect(facilities[1]).toMatchObject({ name: 'Ulkopaikka', capacity: 25, facilityType: 'outdoor' });
   });
 
   it('extracts a compact price for parking-hall map markers', () => {
@@ -370,19 +426,19 @@ describe('parking map helpers', () => {
     expect(hasOfficialParkingRestriction({ name: { fi: 'Pysäköintialue', en: 'Parking area' } })).toBe(false);
   });
 
-  it('uses the street-parking visibility threshold for parking halls', () => {
+  it('uses an independent visibility threshold and layer for parking facilities', () => {
     const facility = { name: 'P-Kluuvi', point: [60.17, 24.94] };
-    expect(shouldShowFacilityMarker(facility, 15, true)).toBe(false);
-    expect(shouldShowFacilityMarker(facility, 16, true)).toBe(true);
+    expect(shouldShowFacilityMarker(facility, 13, true)).toBe(false);
+    expect(shouldShowFacilityMarker(facility, 14, true)).toBe(true);
     expect(shouldShowFacilityMarker(facility, 16, false)).toBe(false);
     expect(shouldShowFacilityMarker({ name: 'Missing coordinates' }, 16, true)).toBe(false);
   });
 
-  it('does not cap the number of parking halls shown at street-parking zoom', () => {
+  it('does not cap the number of parking facilities shown at facility zoom', () => {
     const facilities = Array.from({ length: 12 }, (_, index) => ({ id: index, name: `Hall ${index}`, point: [60.17 + index / 1000, 24.94] }));
-    expect(visibleFacilityMarkers(facilities, 15, true)).toHaveLength(0);
+    expect(visibleFacilityMarkers(facilities, 13, true)).toHaveLength(0);
     expect(visibleFacilityMarkers(facilities, 16, false)).toHaveLength(0);
-    expect(visibleFacilityMarkers(facilities, 16, true)).toHaveLength(12);
+    expect(visibleFacilityMarkers(facilities, 14, true)).toHaveLength(12);
   });
 
   it('reuses street polygons while the viewport remains inside a recent padded request', () => {
@@ -413,17 +469,61 @@ describe('parking map helpers', () => {
   it('uses only fresh and structurally complete reference snapshots', () => {
     const now = new Date('2026-08-08T12:00:00Z').getTime();
     const snapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       generatedAt: '2026-08-01T12:00:00Z',
       paymentZones: { features: [] },
       residentZones: { features: [] },
       serviceMapFacilities: { results: [] },
+      liipiFacilities: { results: [] },
       osmFacilities: { elements: [] },
     };
     expect(isReferenceSnapshotUsable(snapshot, now)).toBe(true);
     expect(isReferenceSnapshotUsable({ ...snapshot, generatedAt: '2026-07-20T12:00:00Z' }, now)).toBe(false);
     expect(isReferenceSnapshotUsable({ ...snapshot, generatedAt: '2026-08-09T12:00:00Z' }, now)).toBe(false);
     expect(isReferenceSnapshotUsable({ ...snapshot, osmFacilities: null }, now)).toBe(false);
+  });
+
+  it('gives Kauniainen curb-rule warnings precedence over provider failures', () => {
+    expect(parkingSpotLoadStatus('kauniainen', 2, 0, 0)).toBe('unsupported');
+    expect(parkingSpotLoadStatus('kauniainen', 2, 1, 24)).toBe('unsupported');
+    expect(parkingSpotLoadStatus('kauniainen', 1, 1, 24, true)).toBe('unsupported');
+    expect(parkingSpotLoadStatus('espoo', 2, 0, 0)).toBe('error');
+    expect(parkingSpotLoadStatus('espoo', 2, 1, 24)).toBe('partial');
+    expect(parkingSpotLoadStatus('vantaa', 1, 1, 24, true)).toBe('stale');
+    expect(parkingSpotLoadStatus('vantaa', 2, 1, 24, true)).toBe('stale');
+  });
+
+  it('accepts Vantaa manifests for 31 days and flags them after 10 days', () => {
+    const now = new Date('2026-08-17T12:00:00Z').getTime();
+    const manifest = {
+      schemaVersion: 2,
+      generatedAt: '2026-08-16T12:00:00Z',
+      featureCount: 2,
+      tiles: [{ path: 'data/vantaa-parking/tile-0-0.json', featureCount: 2, bounds: { west: 24.7, south: 60.2, east: 24.8, north: 60.25 } }],
+    };
+    expect(isVantaaManifestUsable(manifest, now)).toBe(true);
+    expect(isVantaaManifestStale(manifest, now)).toBe(false);
+    const tenDaysOld = { ...manifest, generatedAt: '2026-08-07T12:00:00Z' };
+    expect(isVantaaManifestUsable(tenDaysOld, now)).toBe(true);
+    expect(isVantaaManifestStale(tenDaysOld, now)).toBe(false);
+    const fallback = { ...manifest, generatedAt: '2026-08-01T12:00:00Z' };
+    expect(isVantaaManifestUsable(fallback, now)).toBe(true);
+    expect(isVantaaManifestStale(fallback, now)).toBe(true);
+    expect(isVantaaManifestUsable({ ...manifest, generatedAt: '2026-07-17T12:00:00Z' }, now)).toBe(true);
+    expect(isVantaaManifestUsable({ ...manifest, generatedAt: '2026-07-17T11:59:59Z' }, now)).toBe(false);
+    expect(isVantaaManifestUsable({ ...manifest, generatedAt: '2026-08-17T14:00:00Z' }, now)).toBe(false);
+    expect(isVantaaManifestUsable({ ...manifest, featureCount: 0 }, now)).toBe(false);
+    expect(isVantaaManifestUsable({ ...manifest, tiles: [] }, now)).toBe(false);
+    expect(isVantaaManifestUsable({ ...manifest, tiles: [{ ...manifest.tiles[0], featureCount: -1 }] }, now)).toBe(false);
+  });
+
+  it('rejects Vantaa tiles from a different run or with a wrong declared count', () => {
+    const manifest = { generatedAt: '2026-08-16T12:00:00Z' };
+    const tile = { featureCount: 2 };
+    const snapshot = { schemaVersion: 1, generatedAt: manifest.generatedAt, features: [{ id: 1 }, { id: 2 }] };
+    expect(isVantaaTileUsable(snapshot, manifest, tile)).toBe(true);
+    expect(isVantaaTileUsable({ ...snapshot, generatedAt: '2026-08-15T12:00:00Z' }, manifest, tile)).toBe(false);
+    expect(isVantaaTileUsable({ ...snapshot, features: [{ id: 1 }] }, manifest, tile)).toBe(false);
   });
 });
 
@@ -437,7 +537,7 @@ describe('static search metadata', () => {
     expect(html).toContain('<meta name="robots" content="index, follow');
     expect(html).toContain('application/ld+json');
     expect(html).toContain('"@type": "WebApplication"');
-    expect(html).toContain('<h1>Helsingin pysäköintikartta</h1>');
+    expect(html).toContain('<h1>Pysäköintikartta</h1>');
     expect(source).toContain('document.documentElement.lang = lang');
   });
 
@@ -463,20 +563,28 @@ describe('static search metadata', () => {
     expect(source).not.toContain('/facilities.geojson?limit=-1');
     expect(source).not.toContain('/prediction?after=120');
     expect(source).not.toContain('/utilizations');
+    expect(source).toContain('liipiFacilities(snapshot.liipiFacilities, origin, lang, parkingTime)');
   });
 
   it('keeps the optional static-data workflow free-tier friendly and reversible', () => {
     const workflow = projectFile('.github/workflows/update-parking-data.yml');
     const generator = projectFile('scripts/update-parking-data.mjs');
     const snapshot = JSON.parse(projectFile('public/data/parking-reference.json'));
+    const vantaa = JSON.parse(projectFile('public/data/vantaa-parking.json'));
     const source = projectFile('src/main.jsx');
     expect(workflow).toContain('schedule:');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain('contents: write');
+    expect(workflow).toContain('actions: write');
+    expect(workflow).toContain('gh workflow run deploy-pages.yml --ref main');
+    expect(workflow).toContain('public/data/vantaa-parking/');
     expect(workflow).toContain('node scripts/update-parking-data.mjs');
     expect(workflow).not.toContain('actions/cache');
     expect(generator).toContain('node:fs/promises');
-    expect(snapshot.schemaVersion).toBe(1);
+    expect(snapshot.schemaVersion).toBe(2);
+    expect(vantaa).toMatchObject({ schemaVersion: 2, type: 'FeatureCollectionIndex', featureCount: snapshot.parkingArtifacts.vantaa.featureCount });
+    expect(vantaa.tiles).toHaveLength(25);
+    expect(vantaa.tiles.every((tile) => tile.path.startsWith('data/vantaa-parking/') && tile.featureCount >= 0)).toBe(true);
     expect(source).toContain('isReferenceSnapshotUsable');
     expect(source).toContain("cachedJson('payment-zones'");
     expect(source).toContain("cachedJson('service-map-facilities'");
@@ -485,7 +593,7 @@ describe('static search metadata', () => {
   it('uses natural Finnish wording and omits unreliable street occupancy', () => {
     const source = projectFile('src/main.jsx');
     expect(source).toContain('Väliaikaisesti poissa käytöstä');
-    expect(source).toContain('Pysäköintihallit lähellä');
+    expect(source).toContain('Pysäköintikohteet lähellä');
     expect(source).toContain('Tarkista hinnat ja aukioloajat');
     expect(source).not.toContain('PARKKIHUBI');
     expect(source).not.toContain('Kadunvarsipaikkojen tilanne');
@@ -493,8 +601,10 @@ describe('static search metadata', () => {
 
   it('avoids browser APIs that previously prevented older Safari and Firefox from loading', () => {
     const source = projectFile('src/main.jsx');
+    const providers = projectFile('src/parking-providers.js');
     expect(projectFile('vite.config.js')).toContain("target: ['es2017', 'safari11', 'firefox68']");
     expect(source).not.toContain('.matchAll(');
+    expect(providers).not.toContain('.matchAll(');
     expect(source).not.toContain('.flat(');
     expect(source).not.toContain('Promise.allSettled(');
     expect(source).not.toContain('new AbortController(');

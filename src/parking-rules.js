@@ -102,6 +102,31 @@ export function spotMaxStay(kesto, classRule) {
 
 export function classifyParkingSpot(feature, zoneNumber) {
   const p = feature?.properties || {};
+  const regional = p.parking;
+  if (regional && typeof regional === 'object') {
+    const kind = String(regional.kind || 'unknown');
+    const permit = parkingPermitCode(regional.permit);
+    const hourlyPrice = Number(regional.hourlyPrice);
+    const hasHourlyPrice = regional.hourlyPrice !== null && regional.hourlyPrice !== '' && Number.isFinite(hourlyPrice);
+    return {
+      kind,
+      price: kind === 'paid' && hasHourlyPrice ? hourlyPrice : kind === 'paid' ? null : 0,
+      permit,
+      residentCode: permit,
+      maxStayMinutes: Object.prototype.hasOwnProperty.call(regional, 'maxStayMinutes') ? regional.maxStayMinutes : null,
+      maxStayAssumed: Boolean(regional.maxStayAssumed),
+      stayRules: Array.isArray(regional.stayRules) ? regional.stayRules : [],
+      validity: regional.schedule || '',
+      scheduleLabel: regional.scheduleLabel || '',
+      estimated: regional.estimatedSpaces ?? null,
+      rawLabel: regional.rawLabel || '',
+      municipality: regional.municipality || p.municipality || '',
+      provider: regional.provider || '',
+      notes: regional.notes || '',
+      attribution: regional.attribution || '',
+      zone: regional.zone || null,
+    };
+  }
   const classRule = PARKING_CLASS_RULES[Number(p.luokka)] || null;
   const typeKind = parkingTypeKind(p.tyyppi);
   const restriction = typeKind && typeKind !== 'car' ? typeKind : null;
@@ -143,11 +168,20 @@ function parseTimeRanges(value) {
 // Anything that does not follow that shape returns null on purpose: the caller
 // then says the hours must be checked rather than guessing them.
 export function parseParkingValidity(value) {
+  if (value && typeof value === 'object' && Array.isArray(value.byDay) && value.byDay.length === 7) {
+    const valid = value.byDay.every((ranges) => Array.isArray(ranges) && ranges.every((range) => Number.isFinite(range?.start) && Number.isFinite(range?.end)));
+    return valid ? value : null;
+  }
   const text = String(value || '').replace(/\s+/g, ' ').trim();
   if (!text) return null;
   if (/\d\s*\.\s*\d/.test(text)) return null;
   const saturday = /\(([^)]*)\)/.exec(text);
-  if (saturday && !text.slice(0, saturday.index).trim().endsWith(',')) return null;
+  // The canonical shape separates the Saturday bracket with a comma
+  // ("9-21, (9-18)"). Also accept the comma-less "9-21 (9-18)" when the weekday
+  // part is nothing but hour ranges, but keep rejecting mixed text such as
+  // "7-15, Maksullinen (9-18)" where a stray word means the shape is unclear.
+  const beforeSaturday = saturday ? text.slice(0, saturday.index) : '';
+  if (saturday && !beforeSaturday.trim().endsWith(',') && /[a-zåäö]/i.test(beforeSaturday)) return null;
   const weekdayRanges = parseTimeRanges(saturday ? text.slice(0, saturday.index) : text);
   const saturdayRanges = saturday ? parseTimeRanges(saturday[1]) : [];
   const sundayRanges = saturday ? parseTimeRanges(text.slice(saturday.index + saturday[0].length)) : [];

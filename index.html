@@ -4,40 +4,58 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f6f4ef" />
-    <meta name="description" content="Helsingin pysäköintikartta näyttää kadunvarsipaikkojen maksullisuuden, aikarajat, poikkeukset ja pysäköintihallit valitulle ajalle." />
+    <meta name="description" content="Pysäköintikartta näyttää Helsingin, Espoon, Vantaan ja Tampereen kadunvarsipysäköinnin säännöt sekä lähialueen pysäköintikohteita." />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href="https://esiivola.github.io/helsinki-parking/" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="fi_FI" />
-    <meta property="og:site_name" content="Helsingin pysäköintikartta" />
-    <meta property="og:title" content="Helsingin pysäköintikartta" />
-    <meta property="og:description" content="Tarkista kadunvarsipaikkojen maksullisuus, aikarajat, poikkeukset ja lähialueen pysäköintihallit kartalta." />
+    <meta property="og:site_name" content="Pysäköintikartta" />
+    <meta property="og:title" content="Pysäköintikartta" />
+    <meta property="og:description" content="Tarkista Helsingin, Espoon, Vantaan ja Tampereen kadunvarsipysäköinti sekä lähialueen pysäköintikohteet yhdeltä kartalta." />
     <meta property="og:url" content="https://esiivola.github.io/helsinki-parking/" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Helsingin pysäköintikartta" />
-    <meta name="twitter:description" content="Kadunvarsipaikkojen maksullisuus, aikarajat, poikkeukset ja pysäköintihallit yhdellä kartalla." />
+    <meta name="twitter:title" content="Pysäköintikartta" />
+    <meta name="twitter:description" content="Kadunvarsipysäköinti Helsingissä, Espoossa, Vantaalla ja Tampereella sekä lähialueen pysäköintikohteet." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d2923'/%3E%3Ctext x='32' y='45' text-anchor='middle' font-family='Arial' font-size='40' font-weight='700' fill='white'%3EP%3C/text%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin />
-    <title>Helsingin pysäköintikartta – maksut, aikarajat ja pysäköintihallit</title>
+    <title>Pysäköintikartta – Helsinki, Espoo, Vantaa ja Tampere</title>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "Helsingin pysäköintikartta",
-        "alternateName": "Helsinki Parking Map",
+        "name": "Pysäköintikartta",
+        "alternateName": "Parking map",
         "url": "https://esiivola.github.io/helsinki-parking/",
-        "description": "Karttapalvelu Helsingin kadunvarsipysäköinnin maksullisuuden, aikarajojen, poikkeusten ja pysäköintihallien tarkistamiseen.",
+        "description": "Karttapalvelu Helsingin, Espoon, Vantaan ja Tampereen kadunvarsipysäköinnin sekä lähialueen pysäköintikohteiden tarkistamiseen.",
         "applicationCategory": "NavigationApplication",
         "operatingSystem": "Any",
         "browserRequirements": "Requires JavaScript",
         "inLanguage": ["fi", "en"],
         "isAccessibleForFree": true,
-        "areaServed": {
-          "@type": "City",
-          "name": "Helsinki"
-        },
+        "areaServed": [
+          {
+            "@type": "City",
+            "name": "Helsinki"
+          },
+          {
+            "@type": "City",
+            "name": "Espoo"
+          },
+          {
+            "@type": "City",
+            "name": "Vantaa"
+          },
+          {
+            "@type": "City",
+            "name": "Kauniainen"
+          },
+          {
+            "@type": "City",
+            "name": "Tampere"
+          }
+        ],
         "author": {
           "@type": "Person",
           "url": "https://esiivola.github.io/"
@@ -51,10 +69,11 @@
   <body>
     <div id="root">
       <main class="static-shell">
-        <h1>Helsingin pysäköintikartta</h1>
-        <p>Tarkista Helsingin kadunvarsipaikkojen maksullisuus, pysäköinnin aikarajat, voimassaoloajat, tilapäiset poikkeukset ja lähialueen pysäköintihallit.</p>
-        <p>Palvelu perustuu Helsingin kaupungin, HRI:n, Palvelukartan ja OpenStreetMapin avoimiin aineistoihin. Liikennemerkki ratkaisee aina.</p>
-        <p><a href="https://hri.fi/data/fi/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat">Helsingin pysäköintipaikkojen avoin aineisto</a></p>
+        <h1>Pysäköintikartta</h1>
+        <p>Tarkista Helsingin, Espoon, Vantaan ja Tampereen kadunvarsipysäköinti sekä lähialueen pysäköintikohteet.</p>
+        <p>Kauniaisten kadunvarsisäännöistä ei ole vastaavaa avointa aineistoa. Liikennemerkki ja paikalla oleva opastus ratkaisevat aina.</p>
+        <p>Palvelu perustuu kaupunkien, HRI:n, Palvelukartan, Fintraffic LIIPIn ja OpenStreetMapin avoimiin aineistoihin.</p>
+        <p><a href="https://hri.fi/data/en/dataset/paakaupunkiseudun-palvelukartan-rest-rajapinta">Pääkaupunkiseudun Palvelukartan avoin rajapinta</a></p>
       </main>
     </div>
     <script type="module" src="/src/main.jsx"></script>

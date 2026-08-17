@@ -135,7 +135,9 @@ describe('assumptions the rules are built on', () => {
     expect(totalOf(assumed)).toBe(355);
   });
 
-  // 603 of these are simply blank in the source; only a handful are malformed.
+  // 603 of these are simply blank in the source; the remaining 10 are genuinely
+  // malformed (a stray word, or a period that could be a date). The comma-less
+  // "9-21 (9-18)" shape is now read, so it no longer counts here.
   // If the blank count moves, the city started publishing hours.
   it('records how many chargeable or no-parking windows cannot be read', () => {
     const unreadable = spaces.filter((row) => {
@@ -143,7 +145,7 @@ describe('assumptions the rules are built on', () => {
       return (kind === 'paid' || kind === 'offPeak') && !parseParkingValidity(validity);
     });
     const blank = unreadable.filter((row) => !row.properties.voimassaolo.trim());
-    expect([totalOf(unreadable), totalOf(blank)]).toEqual([621, 603]);
+    expect([totalOf(unreadable), totalOf(blank)]).toEqual([613, 603]);
   });
 });
 
@@ -195,8 +197,34 @@ describe('conservative readings', () => {
   });
 
   it('refuses to guess hours it cannot parse', () => {
+    // A stray word before the bracket, or a period that could be a date, stays
+    // unparsed so the app says "check the sign" rather than inventing hours.
     expect(parseParkingValidity('7-15, Maksullinen (9-18)')).toBeNull();
-    expect(parseParkingValidity('9-21 (9-18)')).toBeNull();
+    expect(parseParkingValidity('9.21 (9-18)')).toBeNull();
+  });
+
+  it('reads the Saturday bracket even without the separating comma', () => {
+    const schedule = parseParkingValidity('9-21 (9-18)');
+    expect(schedule.byDay[1]).toEqual([{ start: 540, end: 1260 }]);
+    expect(schedule.byDay[6]).toEqual([{ start: 540, end: 1080 }]);
+    expect(schedule.byDay[0]).toEqual([]);
+  });
+
+  it('uses explicit regional metadata without Helsinki tariff or schedule fallbacks', () => {
+    const schedule = { byDay: [[], [{ start: 420, end: 1140 }], [], [], [], [], []], source: '7-19' };
+    const paid = classifyParkingSpot({ properties: { parking: {
+      provider: 'service-map', municipality: 'vantaa', kind: 'paid', hourlyPrice: 1,
+      maxStayMinutes: null, schedule, notes: 'Source-specific rule', estimatedSpaces: 16,
+    } } }, '1');
+    expect(paid).toMatchObject({ kind: 'paid', price: 1, municipality: 'vantaa', notes: 'Source-specific rule', estimated: 16 });
+    expect(parseParkingValidity(paid.validity)).toBe(schedule);
+
+    const unknownPrice = classifyParkingSpot({ properties: { parking: {
+      provider: 'service-map', municipality: 'vantaa', kind: 'paid', hourlyPrice: null,
+      maxStayMinutes: null, schedule: null,
+    } } }, '1');
+    expect(unknownPrice.price).toBeNull();
+    expect(unknownPrice.validity).toBe('');
   });
 });
 

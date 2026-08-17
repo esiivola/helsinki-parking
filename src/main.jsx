@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PARKABLE_KINDS, classifyParkingSpot, formatStayMinutes, isGeneralParkingFeature, nextPaidStart, nextScheduleStart, parkingNowStatus, parkingPermitCode, parseParkingValidity, schedulePeriodAt, SHORT_STAY_MINUTES } from './parking-rules.js';
+import { espooParkingUrl, filterFeaturesToBounds, liipiFacilities, municipalityForPoint, parseEspooParkingGml, parseTampereParking, providerIdsForBounds, tampereParkingUrl } from './parking-providers.js';
 import {
   AlertTriangle,
   Building2,
@@ -23,18 +24,26 @@ const HELSINKI = [60.16986, 24.93838];
 const WFS = 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs';
 const SIIRTOVAHTI = 'https://liikenne-elastic-proxy.api.hel.ninja/mobilenote_data/_search';
 const SERVICE_MAP = 'https://api.hel.fi/servicemap/v2/administrative_division/';
-const SERVICE_MAP_FACILITIES = 'https://api.hel.fi/servicemap/v2/unit/?service=537&municipality=helsinki&page_size=200';
+const SERVICE_MAP_FACILITIES = 'https://api.hel.fi/servicemap/v2/unit/?service=537%2C814&municipality=helsinki%2Cespoo%2Cvantaa%2Ckauniainen&page_size=1000';
 const OVERPASS = import.meta.env.DEV ? '/api/overpass/api/interpreter' : 'https://overpass-api.de/api/interpreter';
 const REFERENCE_DATA = `${import.meta.env.BASE_URL}data/parking-reference.json`;
+const VANTAA_DATA = `${import.meta.env.BASE_URL}data/vantaa-parking.json`;
+const TURKU_DATA = `${import.meta.env.BASE_URL}data/turku-parking.json`;
 const MIN_PARKING_ZOOM = 16;
+const MIN_FACILITY_ZOOM = 14;
 export const DEFAULT_MAP_ZOOM = MIN_PARKING_ZOOM;
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, value) => String(value).padStart(2, '0'));
 const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, value) => String(value * 5).padStart(2, '0'));
-const CACHE_PREFIX = 'helsinki-parking:v3:';
+const CACHE_PREFIX = 'regional-parking:v4:';
 const PARKING_SPOT_CACHE_MS = 5 * 60 * 1000;
 const REFERENCE_SNAPSHOT_MAX_AGE = 10 * 24 * 60 * 60 * 1000;
+const VANTAA_SNAPSHOT_MAX_AGE = 31 * 24 * 60 * 60 * 1000;
+const SNAPSHOT_FUTURE_TOLERANCE = 60 * 60 * 1000;
 const pendingJsonRequests = new Map();
 let referenceSnapshotPromise;
+let vantaaManifestPromise;
+const vantaaTilePromises = new Map();
+let turkuSnapshotPromise;
 
 export function writeJsonCache(storage, key, value, now = Date.now()) {
   if (!storage) return false;
@@ -73,46 +82,47 @@ export function shouldReuseParkingSpotCache(cache, bounds, now = Date.now()) {
 export function isReferenceSnapshotUsable(snapshot, now = Date.now()) {
   const generatedAt = new Date(snapshot?.generatedAt || '').getTime();
   const age = now - generatedAt;
-  return snapshot?.schemaVersion === 1
+  return snapshot?.schemaVersion === 2
     && Number.isFinite(generatedAt)
-    && age >= -60 * 60 * 1000
+    && age >= -SNAPSHOT_FUTURE_TOLERANCE
     && age <= REFERENCE_SNAPSHOT_MAX_AGE
     && Array.isArray(snapshot?.paymentZones?.features)
     && Array.isArray(snapshot?.residentZones?.features)
     && Array.isArray(snapshot?.serviceMapFacilities?.results)
+    && (Array.isArray(snapshot?.liipiFacilities) || Array.isArray(snapshot?.liipiFacilities?.results))
     && Array.isArray(snapshot?.osmFacilities?.elements);
 }
 
 const copy = {
   fi: {
-    appName: 'PARKKI', region: 'Helsinki', locating: 'Haetaan sijaintia…', locationReady: 'Sijaintisi', locationFallback: 'Helsingin keskusta',
+    appName: 'PARKKI', region: 'Suomi', locating: 'Haetaan sijaintia…', locationReady: 'Sijaintisi', locationFallback: 'Helsingin keskusta',
     when: 'Pysäköintiaika', date: 'Päivä', time: 'Kellonaika', today: 'Tänään', now: 'Nyt', paidUntil: 'Maksullinen asti', chargingStarts: 'Maksu alkaa', maxStay: 'Enintään', mapHint: 'Valitse pysäköintipaikka kartalta', detailsSummary: 'Lisätiedot',
     freeLegend: 'Maksuton', freeLongLegend: 'Maksuton', freeShortLegend: 'Maksuton, enintään 1 h', paidLegend: 'Maksullinen', unavailableLegend: 'Väliaikaisesti poissa käytöstä', freeLabel: 'Vapaa', paidLabel: 'Maksullinen', unavailableLabel: 'Väliaikaisesti poissa käytöstä', upcomingException: 'Tuleva poikkeus', activeException: 'Voimassa oleva poikkeus', starts: 'Alkaa', ends: 'Päättyy', noTimeLimit: 'ei aikarajaa', limitUnknown: 'aikaraja ei tiedossa', scheduleUnknown: 'maksulliset ajat tarkistettava', banUnknown: 'kieltoajat tarkistettava', withDisc: 'kiekolla', assumedStay: 'paikkaluokan oletus', parkingClass: 'Paikkaluokka', banHours: 'Pysäköintikielto', stayHours: 'Aikaraja voimassa',
-    mapLayers: 'Karttatasot', street: 'Kadunvarsipaikat', priceZones: 'Maksuvyöhykkeet', residentZones: 'Asukasvyöhykkeet', closures: 'Työt ja tapahtumat', removals: 'Siirtokehotukset',
+    mapLayers: 'Karttatasot', street: 'Kadunvarsipaikat', facilities: 'Pysäköintikohteet', priceZones: 'Helsingin maksuvyöhykkeet', residentZones: 'Asukas- ja lupavyöhykkeet', closures: 'Työt ja tapahtumat', removals: 'Siirtokehotukset',
     here: 'Tässä paikassa', tapHint: 'Napauta kartalta pysäköintipaikkaa', noMappedSpot: 'Ei tunnistettua pysäköintipaikkaa', noMappedSpotBody: 'Tälle pisteelle ei löytynyt avointa paikkatietoa. Tarkista aina liikennemerkki.',
     paid: 'Maksullinen pysäköinti', free: 'Maksuton pysäköinti', disc: 'Kiekkopaikka', offPeak: 'Maksuton kieltoajan ulkopuolella', prohibited: 'Pysäköinti kielletty', disabled: 'Invapaikka', loading: 'Kuormauspaikka', taxi: 'Taksiasema', charging: 'Sähköauton latauspaikka', scooter: 'Sähköpotkulautapaikka', bicycle: 'Polkupyöräpaikka', motorcycle: 'Moottoripyöräpaikka', coach: 'Matkailuliikenteen paikka', permitOnly: 'Vain luvalla', restricted: 'Rajoitettu pysäköinti', unknown: 'Pysäköintitiedot puuttuvat',
     perHour: '/ tunti', freeNow: 'Maksuton nyt', paidNow: 'Maksullinen nyt', nextFree: 'Maksuton klo 21 jälkeen', saturdayFree: 'Maksuton klo 18 jälkeen', allDayFree: 'Maksuton koko päivän',
-    hours: 'Maksulliset ajat', weekdays: 'Ma–pe', saturday: 'Lauantai', sunday: 'Sunnuntai', signException: 'Paikkakohtainen voimassaolo', zone: 'Maksuvyöhyke', residentArea: 'Asukasvyöhyke', permit: 'Asukastunnus', estimatedSpaces: 'Arvioitu paikkamäärä',
+    hours: 'Maksulliset ajat', weekdays: 'Ma–pe', saturday: 'Lauantai', sunday: 'Sunnuntai', signException: 'Paikkakohtainen voimassaolo', zone: 'Maksuvyöhyke', residentArea: 'Asukasvyöhyke', permit: 'Asukastunnus', estimatedSpaces: 'Paikkamäärä', publishedRule: 'Aineiston sääntö', sourceNote: 'Lisätieto aineistossa',
     notices: 'Huomiot', closureActive: 'Työ tai tapahtuma alueella', closureBody: 'Lupa-alue leikkaa valitun pysäköintipaikan. Paikkoja voi olla tilapäisesti pois käytöstä.', removalActive: 'Siirtokehotus tämän paikan lähellä', removalBody: 'Kaupungin Siirtovahti näyttää siirtokehotuksen tällä katuosuudella.', removalPeriod: 'Voimassa', maintenanceUnavailable: 'Aura-ajoneuvojen live-syöte ei ole käytettävissä', maintenanceBody: 'Siirtokehotukset tarkistetaan kaupungin Siirtovahti-palvelusta. Kadulla oleva merkki ratkaisee.', officialRestriction: 'Pysäköinti kielletty', officialRestrictionHint: 'Virallinen rajoitus · tarkista liikennemerkki',
-    nearby: 'Pysäköintihallit lähellä', parkingHall: 'Pysäköintihalli', live: 'Ajantasainen', open: 'Avoinna', closed: 'Suljettu', statusUnknown: 'Aukioloaika ei tiedossa', spaces: 'paikkaa vapaana', totalSpaces: 'Paikkoja yhteensä', priceUnavailable: 'Hinta ei tiedossa', forecast: 'Arvio 2 tunnin kuluttua', facilitiesLoading: 'Haetaan pysäköintihalleja…', facilitiesEmpty: 'Lähistöltä ei löytynyt pysäköintihalleja.', openingHours: 'Aukioloajat', operator: 'Ylläpitäjä', paymentMethods: 'Maksutavat', officialSite: 'Tarkista hinnat ja aukioloajat',
+    nearby: 'Pysäköintikohteet lähellä', parkingHall: 'Pysäköintikohde', live: 'Ajantasainen', open: 'Avoinna', closed: 'Suljettu', statusUnknown: 'Aukioloaika ei tiedossa', spaces: 'paikkaa vapaana', totalSpaces: 'Paikkoja yhteensä', priceUnavailable: 'Hinta ei tiedossa', forecast: 'Arvio 2 tunnin kuluttua', facilitiesLoading: 'Haetaan pysäköintikohteita…', facilitiesEmpty: 'Lähistöltä ei löytynyt pysäköintikohteita.', openingHours: 'Aukioloajat', operator: 'Ylläpitäjä', paymentMethods: 'Maksutavat', officialSite: 'Tarkista hinnat ja aukioloajat',
     sources: 'Tietolähteet', advisory: 'Liikennemerkki ratkaisee', disclaimer: 'Sivustolle kootut tiedot voivat olla vanhentuneita tai vääriä. Tarkista aina liikennemerkki ennen pysäköintiä',
-    locate: 'Näytä sijaintini', refresh: 'Päivitä tiedot', close: 'Sulje', details: 'Tiedot', showList: 'Lähialueen hallit', dataUpdated: 'Tiedot päivitetty', dataUpdating: 'Päivitetään tietoja', spotCount: 'pysäköintipaikkaa kartalla', zoomIn: 'Lähennä karttaa nähdäksesi pysäköintipaikat', hour: 'Tunti', minute: 'Minuutti',
-    permissions: 'Sijaintia ei voitu käyttää', privacy: 'Sijaintitietoa käsitellään vain selaimessasi.', more: 'Lisätiedot', cc: '© Helsingin kaupunki / HRI / Palvelukartta, CC BY 4.0 · © OpenStreetMap, ODbL',
+    locate: 'Näytä sijaintini', refresh: 'Päivitä tiedot', close: 'Sulje', details: 'Tiedot', showList: 'Lähialueen kohteet', dataUpdated: 'Tiedot päivitetty', dataUpdating: 'Päivitetään tietoja', spotCount: 'pysäköintipaikkaa kartalla', zoomIn: 'Lähennä karttaa nähdäksesi pysäköintipaikat', hour: 'Tunti', minute: 'Minuutti', partialData: 'Osa pysäköintilähteistä ei vastaa', staleData: 'Vantaan pysäköintitiedot ovat yli 10 päivää vanhoja · tarkista liikennemerkki', curbUnsupported: 'Kauniaisten kadunvarsisäännöille ei ole avointa rajapintaa · tarkista liikennemerkki', dataUnavailable: 'Pysäköintitietoja ei voitu ladata',
+    permissions: 'Sijaintia ei voitu käyttää', privacy: 'Sijaintitietoa käsitellään vain selaimessasi.', more: 'Lisätiedot', cc: '© Helsinki, Espoo, Vantaa, Tampere, Turku / HRI / Palvelukartta / Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
   },
   en: {
-    appName: 'PARKKI', region: 'Helsinki', locating: 'Finding your location…', locationReady: 'Your location', locationFallback: 'Helsinki city centre',
+    appName: 'PARKKI', region: 'Finland', locating: 'Finding your location…', locationReady: 'Your location', locationFallback: 'Helsinki city centre',
     when: 'Parking time', date: 'Date', time: 'Time', today: 'Today', now: 'Now', paidUntil: 'Paid until', chargingStarts: 'Charging starts', maxStay: 'Maximum', mapHint: 'Choose a parking space on the map', detailsSummary: 'Details',
     freeLegend: 'Free', freeLongLegend: 'Free', freeShortLegend: 'Free, max 1 h', paidLegend: 'Paid', unavailableLegend: 'Unavailable', freeLabel: 'Free', paidLabel: 'Paid', unavailableLabel: 'Temporarily unavailable', upcomingException: 'Upcoming exception', activeException: 'Active exception', starts: 'Starts', ends: 'Ends', noTimeLimit: 'no time limit', limitUnknown: 'time limit unknown', scheduleUnknown: 'chargeable hours must be checked', banUnknown: 'no-parking hours must be checked', withDisc: 'with parking disc', assumedStay: 'assumed from the parking class', parkingClass: 'Parking class', banHours: 'No parking', stayHours: 'Time limit in force',
-    mapLayers: 'Map layers', street: 'On-street spaces', priceZones: 'Payment zones', residentZones: 'Resident zones', closures: 'Works and events', removals: 'Relocation notices',
+    mapLayers: 'Map layers', street: 'On-street spaces', facilities: 'Parking facilities', priceZones: 'Helsinki payment zones', residentZones: 'Resident & permit zones', closures: 'Works and events', removals: 'Relocation notices',
     here: 'At this location', tapHint: 'Tap a parking space on the map', noMappedSpot: 'No mapped parking space', noMappedSpotBody: 'Open data has no parking record for this point. Always check the street sign.',
     paid: 'Paid parking', free: 'Free parking', disc: 'Time-limited parking', offPeak: 'Free outside the no-parking hours', prohibited: 'No parking', disabled: 'Accessible parking', loading: 'Loading zone', taxi: 'Taxi rank', charging: 'EV charging space', scooter: 'E-scooter parking', bicycle: 'Bicycle parking', motorcycle: 'Motorcycle parking', coach: 'Tourist coach space', permitOnly: 'Permit holders only', restricted: 'Restricted parking', unknown: 'Parking rules unavailable',
     perHour: '/ hour', freeNow: 'Free now', paidNow: 'Paid now', nextFree: 'Free after 21:00', saturdayFree: 'Free after 18:00', allDayFree: 'Free all day',
-    hours: 'Chargeable hours', weekdays: 'Mon–Fri', saturday: 'Saturday', sunday: 'Sunday', signException: 'Space-specific validity', zone: 'Payment zone', residentArea: 'Resident zone', permit: 'Resident permit', estimatedSpaces: 'Estimated capacity',
+    hours: 'Chargeable hours', weekdays: 'Mon–Fri', saturday: 'Saturday', sunday: 'Sunday', signException: 'Space-specific validity', zone: 'Payment zone', residentArea: 'Resident zone', permit: 'Resident permit', estimatedSpaces: 'Capacity', publishedRule: 'Published rule', sourceNote: 'Source note',
     notices: 'Advisories', closureActive: 'Works or event in this area', closureBody: 'The permit area overlaps the selected parking space. Spaces may be temporarily unavailable.', removalActive: 'Relocation notice near this space', removalBody: 'The City Siirtovahti service shows a relocation notice on this street section.', removalPeriod: 'Valid', maintenanceUnavailable: 'Live snow-plough positions are unavailable', maintenanceBody: 'Relocation notices are checked through the City Siirtovahti service. The street sign is final.', officialRestriction: 'Parking prohibited', officialRestrictionHint: 'Official restriction · check the street sign',
     nearby: 'Nearby parking facilities', parkingHall: 'Parking facility', live: 'Live', open: 'Open', closed: 'Closed', statusUnknown: 'Opening hours unavailable', spaces: 'spaces available', totalSpaces: 'Total spaces', priceUnavailable: 'Price unavailable', forecast: 'Estimate in 2 hours', facilitiesLoading: 'Finding parking facilities…', facilitiesEmpty: 'No parking facilities were found nearby.', openingHours: 'Opening hours', operator: 'Operator', paymentMethods: 'Payment methods', officialSite: 'Check prices and opening hours',
     sources: 'Data sources', advisory: 'Street signs are final', disclaimer: 'Information collected on this site may be outdated or incorrect. Always check the traffic sign before parking.',
-    locate: 'Show my location', refresh: 'Refresh data', close: 'Close', details: 'Details', showList: 'Nearby facilities', dataUpdated: 'Data updated', dataUpdating: 'Updating data', spotCount: 'spaces on map', zoomIn: 'Zoom in to see parking spaces', hour: 'Hour', minute: 'Minute',
-    permissions: 'Location could not be used', privacy: 'Your location is processed only in this browser.', more: 'More information', cc: '© City of Helsinki / HRI / Service Map, CC BY 4.0 · © OpenStreetMap, ODbL',
+    locate: 'Show my location', refresh: 'Refresh data', close: 'Close', details: 'Details', showList: 'Nearby facilities', dataUpdated: 'Data updated', dataUpdating: 'Updating data', spotCount: 'spaces on map', zoomIn: 'Zoom in to see parking spaces', hour: 'Hour', minute: 'Minute', partialData: 'Some parking sources are unavailable', staleData: 'Vantaa parking data is more than 10 days old · check the street sign', curbUnsupported: 'No open curb-rule API is available for Kauniainen · check the street sign', dataUnavailable: 'Parking data could not be loaded',
+    permissions: 'Location could not be used', privacy: 'Your location is processed only in this browser.', more: 'More information', cc: '© Helsinki, Espoo, Vantaa, Tampere, Turku / HRI / Service Map / Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
   },
 };
 
@@ -121,26 +131,32 @@ const sourceInfo = {
     title: 'Tietoa palvelusta',
     intro: 'Palvelu kokoaa avoimet pysäköintitiedot yhteen näkymään. Tiedot voivat olla puutteellisia tai vanhentuneita, joten liikennemerkki ratkaisee aina.',
     rows: [
-      { name: 'Kadunvarsipaikat ja pysäköintivyöhykkeet', detail: 'Helsingin kaupunki / Helsinki Region Infoshare: sijainti, pysäköintiluokka, aikaraja, voimassaolo sekä maksu- ja asukasvyöhykkeet. Paikan luokka ratkaisee näytettävän kategorian, ja epäselvä aikaraja tulkitaan aina lyhimmän vaihtoehdon mukaan.', href: 'https://hri.fi/data/fi/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
-      { name: 'Paikan viralliset voimassaoloajat', detail: 'Helsingin Palvelukartta: valitun pysäköintipaikan viralliset voimassaoloajat ja mahdollinen pysäköintikielto.', href: 'https://palvelukartta.hel.fi/' },
-      { name: 'Työt, tapahtumat ja siirtokehotukset', detail: 'Helsingin kaupungin avoin paikkatieto ja Siirtovahti.', href: 'https://siirtovahti.hel.fi/' },
-      { name: 'Pysäköintihallit', detail: 'Helsingin Palvelukartta ja OpenStreetMap: sijainnit sekä saatavilla olevat hinta- ja aukiolotiedot. Hallikohtainen linkki vie ylläpitäjän ajantasaisiin tietoihin.', href: 'https://palvelukartta.hel.fi/' },
+      { name: 'Helsingin kadunvarsipaikat', detail: 'Helsingin kaupunki / HRI: paikkaluokat, aikarajat ja voimassaolo. Maksu- ja asukasvyöhykkeet sekä tilapäiset poikkeukset ovat vain Helsingistä.', href: 'https://hri.fi/data/fi/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
+      { name: 'Espoon pysäköintialueet', detail: 'Espoon yleisten alueiden rekisteri: aluekohtainen paikkamäärä, aikaraja ja maksuvyöhyke. Maksullisuus päivittyy kylttien käyttöönoton mukaan.', href: 'https://hri.fi/data/fi/dataset/espoon-kaupungin-yleisten-alueiden-rekisteri' },
+      { name: 'Vantaan pysäköintialueet', detail: 'Pääkaupunkiseudun Palvelukartta: aikarajat, maksullisuusajat, paikkamäärät ja lähdekohtaiset lisätiedot. Hinta yhdistetään Palvelukartan maksuvyöhykkeestä.', href: 'https://hri.fi/data/fi/dataset/paakaupunkiseudun-palvelukartan-rest-rajapinta' },
+      { name: 'Tampereen pysäköintipaikat', detail: 'Tampereen kaupunki / geodata.tampere.fi: maksuvyöhykkeet, aikarajat sekä maksu- ja kiekkoajat viikonpäivittäin. Tuntihinta lisätään kaupungin julkaisemasta vyöhykehinnastosta.', href: 'https://data.tampere.fi/data/dataset/tampereen-keskustan-maksulliset-pysakointialueet' },
+      { name: 'Turun maksu- ja lupavyöhykkeet', detail: 'Turun kaupunki: kadunvarsipysäköinnin maksuvyöhykkeet (tuntihinta ja maksulliset ajat viikonpäivittäin) sekä asukas- ja yrityspysäköinnin lupavyöhykkeet omana karttatasonaan.', href: 'https://www.avoindata.fi/data/fi/dataset/turun-kaupungin-pysakoinnin-maksuvyohykkeet' },
+      { name: 'Kauniainen', detail: 'Kaupungilla ei ole avointa, paikkakohtaista kadunvarsipysäköinnin sääntörajapintaa. Kartta näyttää saatavilla olevat liityntäpysäköinti- ja muut pysäköintikohteet.', href: 'https://www.kauniainen.fi/asuminen-ja-ymparisto/liikenne/pysakointi-ja-pysakoinninvalvonta/' },
+      { name: 'Pysäköintikohteet', detail: 'Fintraffic LIIPI, Palvelukartta ja OpenStreetMap: liityntäpysäköinti, yleiset pysäköintialueet ja hallit. LIIPI-tiedot ovat viikoittainen tilannekuva, eivät live-saatavuutta.', href: 'https://parking.fintraffic.fi/docs/index.html' },
       { name: 'Taustakartta', detail: 'OpenStreetMapin karttatiedot ja CARTOn karttatiilet.', href: 'https://www.openstreetmap.org/copyright' },
     ],
-    licence: 'Helsingin kaupungin aineistot CC BY 4.0 · OpenStreetMap ODbL.',
+    licence: 'Kaupunkien, HRI:n, Palvelukartan ja Fintrafficin aineistot CC BY 4.0 · OpenStreetMap ODbL.',
     maker: 'Sivuston tekijän kotisivut:',
   },
   en: {
     title: 'About this service',
     intro: 'The service combines open datasets into one parking view. Data can change, so the street sign is always authoritative.',
     rows: [
-      { name: 'On-street spaces and parking zones', detail: 'City of Helsinki / Helsinki Region Infoshare: location, parking class, time limit, validity, payment zones and resident zones. The class decides the category shown, and an unclear time limit is always read as the shortest option.', href: 'https://hri.fi/data/en/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
-      { name: 'Official validity', detail: 'Helsinki Service Map: the official validity period of the selected space and any parking prohibition.', href: 'https://palvelukartta.hel.fi/en/' },
-      { name: 'Works, events and relocation notices', detail: 'City of Helsinki open spatial data and Siirtovahti.', href: 'https://siirtovahti.hel.fi/' },
-      { name: 'Parking facilities', detail: 'Helsinki Service Map and OpenStreetMap: locations and available price and opening-hour data. Facility links lead to the operator’s current information.', href: 'https://palvelukartta.hel.fi/en/' },
+      { name: 'Helsinki on-street spaces', detail: 'City of Helsinki / HRI: parking classes, time limits and validity. Payment/resident overlays and temporary restrictions are Helsinki-only.', href: 'https://hri.fi/data/en/dataset/helsingin-kantakaupungin-ja-asukaspysakointivyohykkeiden-pysakointipaikat' },
+      { name: 'Espoo parking areas', detail: 'Espoo public-areas register: area-level capacity, time limits and payment zone. Paid-parking rollout remains sign-driven.', href: 'https://hri.fi/data/en_GB/dataset/espoon-kaupungin-yleisten-alueiden-rekisteri' },
+      { name: 'Vantaa parking areas', detail: 'Helsinki metropolitan area Service Map: time limits, chargeable hours, capacity and source notes. Hourly prices are joined from its pay-zone polygons.', href: 'https://hri.fi/data/en/dataset/paakaupunkiseudun-palvelukartan-rest-rajapinta' },
+      { name: 'Tampere parking spaces', detail: 'City of Tampere / geodata.tampere.fi: payment zones, time limits and paid/disc hours by day type. Hourly prices are added from the city\'s published zone tariff.', href: 'https://data.tampere.fi/data/dataset/tampereen-keskustan-maksulliset-pysakointialueet' },
+      { name: 'Turku payment & permit zones', detail: 'City of Turku: on-street payment zones (hourly price and chargeable hours by day type) plus the resident/company permit districts shown as their own map layer.', href: 'https://www.avoindata.fi/data/en/dataset/turun-kaupungin-pysakoinnin-maksuvyohykkeet' },
+      { name: 'Kauniainen', detail: 'No open API publishes space-specific curb rules. Available Park & Ride and other parking facilities are still shown.', href: 'https://www.kauniainen.fi/sv/boende-och-miljo/trafik/parkering-och-parkeringsovervakning/' },
+      { name: 'Parking facilities', detail: 'Fintraffic LIIPI, Service Map and OpenStreetMap provide Park & Ride, public lots and garages. LIIPI data is a weekly snapshot, not live availability.', href: 'https://parking.fintraffic.fi/docs/index.html' },
       { name: 'Base map', detail: 'OpenStreetMap map data and CARTO map tiles.', href: 'https://www.openstreetmap.org/copyright' },
     ],
-    licence: 'City of Helsinki data CC BY 4.0 · OpenStreetMap ODbL.',
+    licence: 'City, HRI, Service Map and Fintraffic data CC BY 4.0 · OpenStreetMap ODbL.',
     maker: 'Service by',
   },
 };
@@ -375,9 +391,11 @@ export function serviceMapFacilities(data, origin, lang = 'fi') {
   return (data?.results || []).map((unit) => {
     const [longitude, latitude] = unit.location?.coordinates || [];
     const description = [unit.short_description?.fi, unit.short_description?.en, unit.description?.fi, unit.description?.en].filter(Boolean).join(' ');
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || outdoorPattern.test(description)) return null;
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
     const point = [latitude, longitude];
     const alwaysOpen = /(?:auki|avoinna|open)\s*24\s*\/\s*7/i.test(description);
+    const capacityMatch = /(?:paikkam[äa][äa]r[äa]|autopaikkoja|parking spaces?)\D{0,12}(\d+)|(\d+)\s*(?:autopaikkaa|parking spaces?)/i.exec(description);
+    const capacity = Number(capacityMatch?.[1] || capacityMatch?.[2]);
     return {
       id: `service-map-${unit.id}`,
       name: unit.name?.[lang] || unit.name?.fi || unit.name?.en || 'Pysäköintihalli',
@@ -385,26 +403,84 @@ export function serviceMapFacilities(data, origin, lang = 'fi') {
       distance: haversine(origin, point),
       openNow: alwaysOpen ? true : null,
       openingHours: alwaysOpen ? '24/7' : '',
-      capacity: null,
+      capacity: Number.isFinite(capacity) && capacity > 0 ? capacity : null,
       spacesAvailable: null,
       price: null,
       operator: unit.organizer_name || '',
       website: unit.www?.[lang] || unit.www?.fi || unit.www?.en || '',
       paymentMethods: paymentMethodsFromText(description),
       source: 'service-map',
+      facilityType: outdoorPattern.test(description) ? 'outdoor' : 'facility',
+      municipality: unit.municipality || '',
     };
   }).filter((facility) => facility && facility.distance < 8000).sort((a, b) => a.distance - b.distance);
 }
 
 function normalizedName(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9åäö]+/g, ' ').replace(/\b(p|parking|parkki|pysäköinti)\b/g, '').trim();
+  return String(value || '').toLowerCase()
+    .replace(/\b(?:pysäköintialue|pysäköintihalli|liityntäpysäköinti|parking area|parking facility|park and ride|p\+r)\b/g, ' ')
+    .replace(/[^a-z0-9åäö]+/g, ' ')
+    .replace(/\b(?:p|parking|parkki|pysäköinti)\b/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function facilityNamesMatch(first, second) {
+  const a = normalizedName(first);
+  const b = normalizedName(second);
+  return Boolean(a && b) && (a === b || (Math.min(a.length, b.length) >= 6 && (a.includes(b) || b.includes(a))));
+}
+
+function facilityLotDesignator(value) {
+  return String(value || '').toLowerCase().match(/\bp\s*[- ]?\s*(\d+)\b/)?.[1] || '';
+}
+
+function editDistance(first, second) {
+  const previous = Array.from({ length: second.length + 1 }, (_, index) => index);
+  for (let firstIndex = 1; firstIndex <= first.length; firstIndex += 1) {
+    let diagonal = previous[0];
+    previous[0] = firstIndex;
+    for (let secondIndex = 1; secondIndex <= second.length; secondIndex += 1) {
+      const above = previous[secondIndex];
+      previous[secondIndex] = Math.min(
+        previous[secondIndex] + 1,
+        previous[secondIndex - 1] + 1,
+        diagonal + (first[firstIndex - 1] === second[secondIndex - 1] ? 0 : 1),
+      );
+      diagonal = above;
+    }
+  }
+  return previous[second.length];
+}
+
+function facilityAliasTokens(value) {
+  const generic = new Set(['asema', 'aseman', 'seisake', 'kauppakeskus', 'europark', 'railway', 'station', 'shopping', 'centre', 'center']);
+  return normalizedName(value).split(' ')
+    .filter((token) => token.length >= 7 && !generic.has(token))
+    .map((token) => (token.length >= 8 && token.endsWith('n') ? token.slice(0, -1) : token));
+}
+
+function facilityAliasesMatch(first, second) {
+  const firstTokens = facilityAliasTokens(first);
+  const secondTokens = facilityAliasTokens(second);
+  return firstTokens.some((firstToken) => secondTokens.some((secondToken) => (
+    firstToken === secondToken
+    || (Math.abs(firstToken.length - secondToken.length) <= 1 && editDistance(firstToken, secondToken) <= 1)
+  )));
+}
+
+function facilitiesMatch(first, second) {
+  const firstLot = facilityLotDesignator(first.name);
+  const secondLot = facilityLotDesignator(second.name);
+  if (firstLot && secondLot && firstLot !== secondLot) return false;
+  const distance = haversine(first.point, second.point);
+  if (facilityNamesMatch(first.name, second.name) && distance < 250) return true;
+  return first.source !== second.source && distance < 50 && facilityAliasesMatch(first.name, second.name);
 }
 
 export function mergeFacilities(primary, fallback, limit = 30) {
   const merged = [...primary];
   for (const candidate of fallback) {
-    const candidateName = normalizedName(candidate.name);
-    const match = merged.find((facility) => candidateName && candidateName === normalizedName(facility.name) && haversine(facility.point, candidate.point) < 250);
+    const match = merged.find((facility) => facilitiesMatch(candidate, facility));
     if (match) {
       if (!match.price && candidate.price) match.price = candidate.price;
       if (!match.website && candidate.website) match.website = candidate.website;
@@ -645,7 +721,15 @@ function offPeakState(meta, date, labels, lang) {
 // and the detail panel both render from this, so they can never disagree.
 export function parkingSpotState(feature, zone, date, exceptions = [], lang = 'fi') {
   const labels = copy[lang] || copy.fi;
-  const meta = spotMeta(feature, zone, lang);
+  const publishedMeta = spotMeta(feature, zone, lang);
+  const stayRules = Array.isArray(publishedMeta.stayRules) ? publishedMeta.stayRules : [];
+  const activeStayRules = stayRules.filter((rule) => !rule.schedule || schedulePeriodAt(parseParkingValidity(rule.schedule), date));
+  const activeDurations = activeStayRules.map((rule) => rule.maxStayMinutes).filter(Number.isFinite);
+  const meta = stayRules.length ? {
+    ...publishedMeta,
+    maxStayMinutes: activeDurations.length ? Math.min(...activeDurations) : activeStayRules.some((rule) => rule.maxStayMinutes && !Number.isFinite(rule.maxStayMinutes)) ? 'unlimited' : null,
+    maxStayAssumed: activeStayRules.some((rule) => Boolean(rule.maxStayAssumed)),
+  } : publishedMeta;
   const active = exceptions.find((exception) => exception.active);
   const base = { until: null, nextPaidAt: null, transition: null, hasUpcoming: exceptions.some((exception) => !exception.active), exceptions, meta };
   const state = active
@@ -695,7 +779,13 @@ export function shouldShowLocationMarker(locationState) {
 
 function wfsUrl(layer, { bounds, count = 5000 } = {}) {
   const q = new URLSearchParams({ service: 'WFS', version: '2.0.0', request: 'GetFeature', typeName: `avoindata:${layer}`, outputFormat: 'application/json', srsName: 'EPSG:4326', count: String(count) });
-  if (bounds) q.set('bbox', `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()},EPSG:4326`);
+  if (bounds) {
+    const west = typeof bounds.getWest === 'function' ? bounds.getWest() : bounds.west;
+    const south = typeof bounds.getSouth === 'function' ? bounds.getSouth() : bounds.south;
+    const east = typeof bounds.getEast === 'function' ? bounds.getEast() : bounds.east;
+    const north = typeof bounds.getNorth === 'function' ? bounds.getNorth() : bounds.north;
+    q.set('bbox', `${west},${south},${east},${north},EPSG:4326`);
+  }
   return `${WFS}?${q}`;
 }
 
@@ -709,6 +799,21 @@ async function jsonWithTimeout(url, ms = 12000, signal, options = {}) {
     const response = await fetch(url, request);
     if (!response.ok) throw new Error(`${response.status}`);
     return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function textWithTimeout(url, ms = 12000, signal) {
+  const controller = createAbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  if (signal) signal.addEventListener('abort', () => controller.abort(), { once: true });
+  try {
+    const request = { headers: { Accept: 'application/xml,text/xml;q=0.9,*/*;q=0.1' } };
+    if (controller.requestSignal) request.signal = controller.requestSignal;
+    const response = await fetch(url, request);
+    if (!response.ok) throw new Error(`${response.status}`);
+    return await response.text();
   } finally {
     clearTimeout(timer);
   }
@@ -732,6 +837,117 @@ function getReferenceSnapshot() {
       .catch(() => null);
   }
   return referenceSnapshotPromise;
+}
+
+function staticBoundsIntersect(first, second) {
+  return first && second && first.west <= second.east && first.east >= second.west && first.south <= second.north && first.north >= second.south;
+}
+
+export function isVantaaManifestUsable(snapshot, now = Date.now()) {
+  const generatedAt = new Date(snapshot?.generatedAt || '').getTime();
+  const age = now - generatedAt;
+  const timestampValid = Number.isFinite(generatedAt)
+    && age >= -SNAPSHOT_FUTURE_TOLERANCE
+    && age <= VANTAA_SNAPSHOT_MAX_AGE;
+  const validLegacy = snapshot?.schemaVersion === 1 && Array.isArray(snapshot.features);
+  const validIndex = snapshot?.schemaVersion === 2
+    && Number.isInteger(snapshot.featureCount)
+    && snapshot.featureCount > 0
+    && Array.isArray(snapshot.tiles)
+    && snapshot.tiles.length > 0
+    && snapshot.tiles.every((tile) => (
+      typeof tile?.path === 'string'
+      && tile.path.length > 0
+      && Number.isInteger(tile.featureCount)
+      && tile.featureCount >= 0
+      && ['west', 'south', 'east', 'north'].every((key) => Number.isFinite(tile?.bounds?.[key]))
+    ));
+  return timestampValid && (validLegacy || validIndex);
+}
+
+export function isVantaaManifestStale(snapshot, now = Date.now()) {
+  if (!isVantaaManifestUsable(snapshot, now)) return false;
+  return now - new Date(snapshot.generatedAt).getTime() > REFERENCE_SNAPSHOT_MAX_AGE;
+}
+
+export function isVantaaTileUsable(snapshot, manifest, tile) {
+  return snapshot?.schemaVersion === 1
+    && snapshot.generatedAt === manifest?.generatedAt
+    && Array.isArray(snapshot.features)
+    && snapshot.features.length === tile?.featureCount;
+}
+
+function getVantaaManifest() {
+  if (!vantaaManifestPromise) {
+    vantaaManifestPromise = jsonWithTimeout(VANTAA_DATA, 12000)
+      .then((snapshot) => {
+        if (!isVantaaManifestUsable(snapshot)) throw new Error('Invalid or expired Vantaa parking snapshot');
+        return { manifest: snapshot, stale: isVantaaManifestStale(snapshot) };
+      })
+      .catch((error) => { vantaaManifestPromise = undefined; throw error; });
+  }
+  return vantaaManifestPromise;
+}
+
+async function getVantaaFeatures(bounds) {
+  const { manifest, stale } = await getVantaaManifest();
+  if (manifest.schemaVersion === 1) return { features: filterFeaturesToBounds(manifest.features, bounds), stale };
+  const tiles = manifest.tiles.filter((tile) => tile?.path && staticBoundsIntersect(tile.bounds, bounds));
+  const collections = await Promise.all(tiles.map((tile) => {
+    if (!vantaaTilePromises.has(tile.path)) {
+      const url = `${import.meta.env.BASE_URL}${String(tile.path).replace(/^\/+/, '')}`;
+      const request = jsonWithTimeout(url, 20000).then((snapshot) => {
+        if (!isVantaaTileUsable(snapshot, manifest, tile)) throw new Error(`Invalid Vantaa parking tile ${tile.path}`);
+        return snapshot.features;
+      }).catch((error) => { vantaaTilePromises.delete(tile.path); throw error; });
+      vantaaTilePromises.set(tile.path, request);
+    }
+    return vantaaTilePromises.get(tile.path);
+  }));
+  const seen = new Set();
+  const features = collections.reduce((all, collection) => all.concat(collection), []).filter((feature) => {
+    const id = String(feature?.id || '');
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  return { features: filterFeaturesToBounds(features, bounds), stale };
+}
+
+// Turku ships as one small static FeatureCollection (three payment zones), so it
+// needs neither pagination nor tiling — load it once, then filter to the view.
+// Turku's zones change rarely, so an old snapshot is still shown rather than
+// blocked; the sign-is-final disclaimer already covers staleness.
+export function isTurkuSnapshotUsable(snapshot, now = Date.now()) {
+  const generatedAt = new Date(snapshot?.generatedAt || '').getTime();
+  return snapshot?.schemaVersion === 1
+    && Number.isFinite(generatedAt)
+    && now - generatedAt >= -SNAPSHOT_FUTURE_TOLERANCE
+    && Array.isArray(snapshot?.features)
+    && snapshot.features.length > 0;
+}
+
+function getTurkuSnapshot() {
+  if (!turkuSnapshotPromise) {
+    turkuSnapshotPromise = jsonWithTimeout(TURKU_DATA, 12000)
+      .then((snapshot) => {
+        if (!isTurkuSnapshotUsable(snapshot)) throw new Error('Invalid or expired Turku parking snapshot');
+        return snapshot;
+      })
+      .catch((error) => { turkuSnapshotPromise = undefined; throw error; });
+  }
+  return turkuSnapshotPromise;
+}
+
+function getTurkuFeatures(bounds) {
+  return getTurkuSnapshot().then((snapshot) => ({ features: filterFeaturesToBounds(snapshot.features, bounds), stale: false }));
+}
+
+// Resident/permit districts render in the shared resident-zone overlay, so the
+// caller merges them into mapData.residents. A missing snapshot resolves to none
+// rather than breaking Helsinki's residents.
+function getTurkuResidentZones() {
+  return getTurkuSnapshot().then((snapshot) => (Array.isArray(snapshot.residentZones) ? snapshot.residentZones : [])).catch(() => []);
 }
 
 function createAbortController() {
@@ -762,6 +978,15 @@ function settleAll(promises) {
     (value) => ({ status: 'fulfilled', value }),
     (reason) => ({ status: 'rejected', reason }),
   )));
+}
+
+export function parkingSpotLoadStatus(municipality, providerCount, successfulCount, featureCount, stale = false) {
+  if (municipality === 'kauniainen') return 'unsupported';
+  if (!providerCount) return 'empty';
+  if (!successfulCount) return 'error';
+  if (stale) return 'stale';
+  if (successfulCount < providerCount) return 'partial';
+  return featureCount ? 'ready' : 'empty';
 }
 
 function overpassUrl([lat, lon]) {
@@ -805,7 +1030,7 @@ export function hasOfficialParkingRestriction(serviceMap) {
 }
 
 export function shouldShowFacilityMarker(facility, zoom, streetLayerEnabled = true) {
-  if (!streetLayerEnabled || !shouldLoadParkingSpots(zoom)) return false;
+  if (!streetLayerEnabled || Number(zoom) < MIN_FACILITY_ZOOM) return false;
   return Array.isArray(facility?.point)
     && facility.point.length === 2
     && facility.point.every(Number.isFinite)
@@ -864,12 +1089,13 @@ function SourcePanel({ lang, onClose }) {
 export function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTime, onClose }) {
   const t = copy[lang];
   if (!selected) return null;
-  const { meta, zone, resident } = selected;
-  if (!meta) return null;
+  const { zone, resident } = selected;
+  if (!selected.meta) return null;
   const locale = lang === 'fi' ? 'fi-FI' : 'en-GB';
   const selectedDate = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(parkingTime);
   const selectedTime = `${selectedDate} · ${dateTimeInputValue(parkingTime).slice(11, 16)}`;
   const state = parkingSpotState(selected.feature, zone, parkingTime, exceptions, lang);
+  const meta = state.meta || selected.meta;
   const officialRestriction = hasOfficialParkingRestriction(serviceMap);
   const cardState = officialRestriction ? 'unavailable' : state.status === 'paid' ? 'paid' : state.status === 'unavailable' ? 'unavailable' : 'free';
   const permit = parkingPermitCode(meta.permit || resident);
@@ -885,7 +1111,7 @@ export function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTi
   // Read from the layer rather than the Service Map's own wording, so the row
   // can never contradict the window named in the summary line.
   const stayHoursLabel = ['free', 'disc'].includes(meta.kind) ? formatParkingValidity(meta.validity, lang) : '';
-  const hasDetails = Boolean(zone || showChargeableHours || showBanHours || stayHoursLabel || meta.rawLabel);
+  const hasDetails = Boolean(zone || showChargeableHours || showBanHours || stayHoursLabel || meta.rawLabel || meta.notes || Number.isFinite(meta.estimated));
   return (
     <section className="place-card">
       <button className="panel-close" onClick={onClose} aria-label={t.close}><X size={17} /></button>
@@ -908,7 +1134,9 @@ export function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTi
           {showChargeableHours && <div><span>{t.hours}</span><strong>{scheduleLabel}</strong></div>}
           {showBanHours && <div><span>{t.banHours}</span><strong>{scheduleLabel}</strong></div>}
           {stayHoursLabel && <div><span>{t.stayHours}</span><strong>{stayHoursLabel}</strong></div>}
-          {meta.rawLabel && <div><span>{t.parkingClass}</span><strong>{meta.rawLabel}</strong></div>}
+          {Number.isFinite(meta.estimated) && <div><span>{t.estimatedSpaces}</span><strong>{meta.estimated}</strong></div>}
+          {meta.rawLabel && <div><span>{meta.provider ? t.publishedRule : t.parkingClass}</span><strong>{meta.rawLabel}</strong></div>}
+          {meta.notes && meta.notes !== meta.rawLabel && <div><span>{t.sourceNote}</span><strong>{meta.notes}</strong></div>}
         </div>
       </details>}
     </section>
@@ -933,7 +1161,7 @@ function FacilityPanel({ facility, lang, onClose }) {
   const priceState = facility.openNow === false ? 'unavailable' : /maksuton|free/i.test(compactPrice || '') ? 'free' : 'neutral';
   const showPredictedDetail = predictedSpaces !== null && liveSpaces !== null;
   const paymentText = formatPaymentMethods(facility.paymentMethods, lang);
-  const hasDetails = showPredictedDetail || Number.isFinite(facility.capacity) || (facility.price && facility.price !== compactPrice) || facility.openingHours || facility.operator;
+  const hasDetails = showPredictedDetail || Number.isFinite(facility.capacity) || Number.isFinite(facility.maxStayMinutes) || (facility.price && facility.price !== compactPrice) || facility.openingHours || facility.operator || facility.parkingTerms;
   return (
     <section className="place-card facility-card">
       <button className="panel-close" onClick={onClose} aria-label={t.close}><X size={17} /></button>
@@ -946,9 +1174,11 @@ function FacilityPanel({ facility, lang, onClose }) {
       {hasDetails && <div className="detail-rows facility-details">
         {showPredictedDetail && <div><span>{t.forecast}</span><strong>≈ {facility.predictedSpaces}</strong></div>}
         {Number.isFinite(facility.capacity) && <div><span>{t.totalSpaces}</span><strong>{facility.capacity}</strong></div>}
+        {Number.isFinite(facility.maxStayMinutes) && <div><span>{t.maxStay}</span><strong>{formatStayMinutes(facility.maxStayMinutes)}</strong></div>}
         {facility.openingHours && <div><span>{t.openingHours}</span><strong>{facility.openingHours}</strong></div>}
         {facility.operator && <div><span>{t.operator}</span><strong>{facility.operator}</strong></div>}
         {facility.price && facility.price !== compactPrice && <div><span>{t.details}</span><strong>{facility.price}</strong></div>}
+        {facility.parkingTerms && facility.parkingTerms !== facility.price && <div><span>{t.sourceNote}</span><strong>{facility.parkingTerms}</strong></div>}
       </div>}
       {paymentText && <p className="facility-payment-methods">{paymentText}</p>}
       {facility.website && <a className="facility-website" href={facility.website} target="_blank" rel="noreferrer">{t.officialSite}<ExternalLink size={14} /></a>}
@@ -958,6 +1188,7 @@ function FacilityPanel({ facility, lang, onClose }) {
 
 function App() {
   const [lang, setLang] = useState('fi');
+  const langRef = useRef(lang);
   const t = copy[lang];
   const mapNode = useRef(null);
   const mapRef = useRef(null);
@@ -966,18 +1197,26 @@ function App() {
   const layersRef = useRef({ zones: null, residents: null, spots: null, closures: null, facilities: null });
   const dataRef = useRef({ zones: [], residents: [], spots: [], closures: [] });
   const parkingAbort = useRef(null);
-  const parkingCache = useRef(null);
+  const parkingCache = useRef(new Map());
+  const parkingRequest = useRef(0);
   const removalAbort = useRef(null);
   const removalLoaded = useRef(false);
   const serviceMapCache = useRef(new Map());
+  const facilitiesRequest = useRef(0);
   const [location, setLocation] = useState({ point: HELSINKI, state: 'fallback', message: null });
+  const [mapCenter, setMapCenter] = useState(HELSINKI);
   const [parkingTime, setParkingTime] = useState(() => ceilToFiveMinutes());
   const [mapZoom, setMapZoom] = useState(DEFAULT_MAP_ZOOM);
   const [selected, setSelected] = useState(null);
   const [layerMenu, setLayerMenu] = useState(false);
   const [timeMenu, setTimeMenu] = useState(false);
-  const [layers, setLayers] = useState({ street: true, zones: false, residents: false });
+  const [layers, setLayers] = useState({ street: true, facilities: true, zones: false, residents: false });
   const [mapData, setMapData] = useState({ zones: [], residents: [], closures: [] });
+  // Turku's permit-zone overlay is fetched only once the map reaches Turku, so
+  // metro users never download another city's data. Kept out of mapData so the
+  // Helsinki resident load never races with or overwrites it.
+  const [turkuResidents, setTurkuResidents] = useState([]);
+  const turkuResidentsRef = useRef(false);
   const [removalNotices, setRemovalNotices] = useState([]);
   const [serviceMap, setServiceMap] = useState(null);
   const [spots, setSpots] = useState([]);
@@ -988,7 +1227,9 @@ function App() {
   const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
+    langRef.current = lang;
     document.documentElement.lang = lang;
+    setSelected((current) => current ? { ...current, meta: spotMeta(current.feature, current.zone, lang) } : current);
   }, [lang]);
 
   useEffect(() => {
@@ -1010,12 +1251,13 @@ function App() {
     const current = dataRef.current;
     const spot = parkingFeatureAt(point, explicitFeature, current.spots);
     if (!spot) { setSelected(null); setMobilePanel(null); return; }
-    const zoneFeature = current.zones.find((f) => pointInFeature(point, f));
-    const residentFeature = current.residents.find((f) => pointInFeature(point, f));
-    const zone = zoneFeature?.properties?.vyohykkeen_nro || null;
-    setSelected({ point: [latlng.lat, latlng.lng], feature: spot, meta: spotMeta(spot, zone, lang), zone, resident: residentFeature?.properties?.asukaspysakointitunnus || '' });
+    const regional = spot.properties?.parking;
+    const zoneFeature = regional ? null : current.zones.find((f) => pointInFeature(point, f));
+    const residentFeature = regional ? null : current.residents.find((f) => pointInFeature(point, f));
+    const zone = regional?.zone || zoneFeature?.properties?.vyohykkeen_nro || null;
+    setSelected({ point: [latlng.lat, latlng.lng], feature: spot, meta: spotMeta(spot, zone, langRef.current), zone, resident: residentFeature?.properties?.asukaspysakointitunnus || '' });
     setMobilePanel('place');
-  }, [lang]);
+  }, []);
 
   const locate = useCallback(() => {
     setLocation((v) => ({ ...v, state: 'locating', message: null }));
@@ -1047,11 +1289,15 @@ function App() {
     }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     Object.keys(layersRef.current).forEach((key) => { layersRef.current[key] = L.layerGroup().addTo(map); });
-    const updateZoom = () => setMapZoom(map.getZoom());
+    const updateViewport = () => {
+      const center = map.getCenter();
+      setMapZoom(map.getZoom());
+      setMapCenter([center.lat, center.lng]);
+    };
     map.on('click', (e) => analyzePoint(e.latlng));
-    map.on('zoomend', updateZoom);
+    map.on('moveend', updateViewport);
     mapRef.current = map;
-    return () => { map.off('zoomend', updateZoom); map.remove(); mapRef.current = null; };
+    return () => { map.off('moveend', updateViewport); map.remove(); mapRef.current = null; };
   }, [analyzePoint]);
 
   useEffect(() => {
@@ -1144,7 +1390,7 @@ function App() {
     } catch { if (!controller.signal.aborted) setRemovalNotices([]); }
   }, []);
 
-  const needsRemovalData = shouldLoadParkingSpots(mapZoom) && layers.street && spotStatus === 'ready';
+  const needsRemovalData = shouldLoadParkingSpots(mapZoom) && layers.street && ['ready', 'partial', 'stale'].includes(spotStatus);
   useEffect(() => {
     if (!needsRemovalData) { removalAbort.current?.abort(); return undefined; }
     const timer = setTimeout(loadRemovalNotices, 1200);
@@ -1154,30 +1400,67 @@ function App() {
   const loadSpots = useCallback(async () => {
     const map = mapRef.current;
     if (!map) return;
-    if (!layers.street) { setSpotStatus('ready'); setSpots([]); return; }
-    if (!shouldLoadParkingSpots(map.getZoom())) { setSpotStatus('zoom'); setSpots([]); return; }
+    const requestId = parkingRequest.current + 1;
+    parkingRequest.current = requestId;
+    if (!layers.street) { parkingAbort.current?.abort(); setSpotStatus('ready'); setSpots([]); return; }
+    if (!shouldLoadParkingSpots(map.getZoom())) { parkingAbort.current?.abort(); setSpotStatus('zoom'); setSpots([]); return; }
     const viewport = plainBounds(map.getBounds());
-    if (shouldReuseParkingSpotCache(parkingCache.current, viewport)) {
-      setSpots(parkingCache.current.features);
-      setSpotStatus('ready');
-      return;
+    const requestBounds = plainBounds(map.getBounds().pad(0.2));
+    const providers = providerIdsForBounds(requestBounds);
+    const center = map.getCenter();
+    const municipality = municipalityForPoint([center.lat, center.lng]);
+    // Pull Turku's permit-zone overlay only once the view reaches Turku; the same
+    // cached snapshot already serves the paid spots requested below.
+    if (providers.includes('turku') && !turkuResidentsRef.current) {
+      turkuResidentsRef.current = true;
+      getTurkuResidentZones().then((zones) => { if (zones.length) setTurkuResidents(zones); }).catch(() => { turkuResidentsRef.current = false; });
     }
+    if (!providers.length) { setSpots([]); setSpotStatus(parkingSpotLoadStatus(municipality, 0, 0, 0)); return; }
     parkingAbort.current?.abort();
     const controller = createAbortController();
     parkingAbort.current = controller;
     setSpotStatus('loading');
-    try {
-      const requestBounds = map.getBounds().pad(0.2);
-      const data = await jsonWithTimeout(wfsUrl('Pysakointipaikat_alue', { bounds: requestBounds, count: 2000 }), 18000, controller.signal);
-      if (!controller.signal.aborted) {
-        const features = (data.features || []).filter(isGeneralParkingFeature);
-        parkingCache.current = { bounds: plainBounds(requestBounds), fetchedAt: Date.now(), features };
-        setSpots(features);
-        setSpotStatus('ready');
+    const loadProvider = (provider) => {
+      const cached = parkingCache.current.get(provider);
+      if (shouldReuseParkingSpotCache(cached, viewport)) return Promise.resolve({ provider, features: cached.features, stale: Boolean(cached.stale) });
+      let request;
+      if (provider === 'helsinki') {
+        request = jsonWithTimeout(wfsUrl('Pysakointipaikat_alue', { bounds: requestBounds, count: 2000 }), 18000, controller.signal)
+          .then((data) => ({ features: (data.features || []).filter(isGeneralParkingFeature), stale: false }));
+      } else if (provider === 'espoo') {
+        request = textWithTimeout(espooParkingUrl(requestBounds, 5000), 22000, controller.signal)
+          .then((xml) => ({ features: parseEspooParkingGml(xml).filter(isGeneralParkingFeature), stale: false }));
+      } else if (provider === 'tampere') {
+        request = jsonWithTimeout(tampereParkingUrl(requestBounds, 4000), 18000, controller.signal)
+          .then((data) => ({ features: parseTampereParking(data).filter(isGeneralParkingFeature), stale: false }));
+      } else if (provider === 'turku') {
+        request = getTurkuFeatures(requestBounds)
+          .then((result) => ({ ...result, features: result.features.filter(isGeneralParkingFeature) }));
+      } else {
+        request = getVantaaFeatures(requestBounds)
+          .then((result) => ({ ...result, features: result.features.filter(isGeneralParkingFeature) }));
       }
-    } catch {
-      if (!controller.signal.aborted) setSpotStatus('error');
-    }
+      return request.then(({ features, stale }) => {
+        if (controller.signal.aborted) throw new Error('aborted');
+        parkingCache.current.set(provider, { bounds: requestBounds, fetchedAt: Date.now(), features, stale });
+        return { provider, features, stale };
+      });
+    };
+    const results = await settleAll(providers.map(loadProvider));
+    if (controller.signal.aborted || parkingRequest.current !== requestId) return;
+    const successful = results.filter((result) => result.status === 'fulfilled');
+    if (!successful.length) { setSpots([]); setSpotStatus(parkingSpotLoadStatus(municipality, providers.length, 0, 0)); return; }
+    const combined = successful.reduce((all, result) => all.concat(result.value.features), []);
+    const seen = new Set();
+    const features = combined.filter((feature) => {
+      const id = String(feature.id || `${feature.properties?.municipality || 'parking'}:${JSON.stringify(feature.geometry?.coordinates?.[0]?.[0] || '')}`);
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+    setSpots(features);
+    const stale = successful.some((result) => result.value.stale);
+    setSpotStatus(parkingSpotLoadStatus(municipality, providers.length, successful.length, features.length, stale));
   }, [layers.street]);
 
   useEffect(() => {
@@ -1197,11 +1480,11 @@ function App() {
       style: (feature) => ({ color: feature.properties.vyohykkeen_nro === '1' ? '#155eef' : '#6094ff', weight: 2, fillColor: feature.properties.vyohykkeen_nro === '1' ? '#2d6df6' : '#85aaff', fillOpacity: 0.10, dashArray: '7 6' }),
       onEachFeature: (feature, layer) => { const label = parkingAreaLabel(feature, 'payment', lang); if (label) layer.bindTooltip(label, { permanent: true, direction: 'center', className: 'area-zone-label payment', opacity: 1 }); },
     }).addTo(groups.zones);
-    if (layers.residents) L.geoJSON(mapData.residents, {
+    if (layers.residents) L.geoJSON([...mapData.residents, ...turkuResidents], {
       style: { color: '#7d52c8', weight: 1.7, fillColor: '#ae8fe6', fillOpacity: 0.10, dashArray: '4 5' },
       onEachFeature: (feature, layer) => { const label = parkingAreaLabel(feature, 'resident', lang); if (label) layer.bindTooltip(label, { permanent: true, direction: 'center', className: 'area-zone-label resident', opacity: 1 }); },
     }).addTo(groups.residents);
-  }, [mapData.zones, mapData.residents, layers, lang]);
+  }, [mapData.zones, mapData.residents, turkuResidents, layers, lang]);
 
   useEffect(() => {
     const group = layersRef.current.spots;
@@ -1213,8 +1496,9 @@ function App() {
       if (states.has(feature)) return states.get(feature);
       const center = geometryCenter(feature);
       const point = center ? [center[1], center[0]] : [0, 0];
-      const zone = mapData.zones.find((candidate) => pointInFeature(point, candidate))?.properties?.vyohykkeen_nro;
-      const state = parkingPolygonState(feature, zone, parkingTime, mapData.closures, removalNotices, lang);
+      const regional = feature.properties?.parking;
+      const zone = regional?.zone || (!regional ? mapData.zones.find((candidate) => pointInFeature(point, candidate))?.properties?.vyohykkeen_nro : null);
+      const state = parkingPolygonState(feature, zone, parkingTime, regional ? [] : mapData.closures, regional ? [] : removalNotices, lang);
       states.set(feature, state);
       return state;
     };
@@ -1238,6 +1522,7 @@ function App() {
   }, [spots, layers.street, lang, analyzePoint, t.street, parkingTime, mapData.zones, mapData.closures, removalNotices]);
 
   useEffect(() => {
+    if (selected?.feature?.properties?.parking) { setServiceMap(null); return undefined; }
     const originId = selected?.feature?.properties?.id;
     if (!originId) { setServiceMap(null); return; }
     if (serviceMapCache.current.has(originId)) {
@@ -1257,21 +1542,28 @@ function App() {
     return () => controller.abort();
   }, [selected?.feature]);
 
-  const selectedExceptions = useMemo(() => parkingExceptions(selected?.feature, parkingTime, mapData.closures, removalNotices), [selected?.feature, parkingTime, mapData.closures, removalNotices]);
+  const selectedExceptions = useMemo(() => selected?.feature?.properties?.parking ? [] : parkingExceptions(selected?.feature, parkingTime, mapData.closures, removalNotices), [selected?.feature, parkingTime, mapData.closures, removalNotices]);
   const selectedFacility = useMemo(() => facilities.find((facility) => facility.id === activeFacility) || null, [facilities, activeFacility]);
 
   const loadFacilities = useCallback(async () => {
-    const origin = location.point;
+    const requestId = facilitiesRequest.current + 1;
+    facilitiesRequest.current = requestId;
+    const origin = mapCenter;
     const snapshot = await getReferenceSnapshot();
+    if (facilitiesRequest.current !== requestId) return;
     const serviceMapDataPromise = snapshot
       ? Promise.resolve(snapshot.serviceMapFacilities)
       : cachedJson('service-map-facilities', SERVICE_MAP_FACILITIES, 12 * 60 * 60 * 1000);
     const serviceMapPromise = serviceMapDataPromise
       .then((data) => serviceMapFacilities(data, origin, lang))
       .catch(() => []);
-    const visibleServiceMapPromise = serviceMapPromise.then((facilitiesFromServiceMap) => {
-      if (facilitiesFromServiceMap.length) setFacilities(facilitiesFromServiceMap.slice(0, 30));
-      return facilitiesFromServiceMap;
+    const liipiPromise = snapshot
+      ? Promise.resolve(liipiFacilities(snapshot.liipiFacilities, origin, lang, parkingTime))
+      : Promise.resolve([]);
+    const primaryPromise = Promise.all([liipiPromise, serviceMapPromise]).then(([liipiRows, serviceMapRows]) => {
+      const primary = mergeFacilities(liipiRows, serviceMapRows, 60);
+      if (primary.length && facilitiesRequest.current === requestId) setFacilities(primary);
+      return primary;
     });
     const osmKey = `osm-facilities:${facilityAreaKey(origin)}`;
     const cachedOsm = readJsonCache(browserStorage(), osmKey, 6 * 60 * 60 * 1000);
@@ -1280,22 +1572,32 @@ function App() {
       ? Promise.resolve(snapshot.osmFacilities)
       : (cachedOsm
         ? Promise.resolve(cachedOsm)
-        : new Promise((resolve) => setTimeout(resolve, 900)).then(() => cachedJson(osmKey, overpassUrl(origin), 6 * 60 * 60 * 1000, 22000)));
+        : new Promise((resolve) => setTimeout(resolve, 900)).then(() => facilitiesRequest.current === requestId
+          ? cachedJson(osmKey, overpassUrl(origin), 6 * 60 * 60 * 1000, 22000)
+          : null));
     const osmPromise = osmDataPromise
       .then((data) => osmFacilities(data, origin))
       .catch(() => []);
-    const openDataPromise = Promise.all([visibleServiceMapPromise, osmPromise])
-      .then(([serviceMapRows, osm]) => mergeFacilities(serviceMapRows, osm, 30));
-    setFacilities(await openDataPromise);
-  }, [location.point, lang]);
+    const openDataPromise = Promise.all([primaryPromise, osmPromise])
+      .then(([primary, osm]) => mergeFacilities(primary, osm, 60));
+    const nextFacilities = await openDataPromise;
+    if (facilitiesRequest.current === requestId) setFacilities(nextFacilities);
+  }, [mapCenter, lang, parkingTime]);
 
-  useEffect(() => { loadFacilities(); }, [loadFacilities]);
+  useEffect(() => {
+    if (!layers.facilities) {
+      facilitiesRequest.current += 1;
+      return undefined;
+    }
+    const timer = setTimeout(loadFacilities, 400);
+    return () => { clearTimeout(timer); facilitiesRequest.current += 1; };
+  }, [loadFacilities, layers.facilities]);
 
   useEffect(() => {
     const group = layersRef.current.facilities;
     if (!group) return;
     group.clearLayers();
-    visibleFacilityMarkers(facilities, mapZoom, layers.street).forEach((facility) => {
+    visibleFacilityMarkers(facilities, mapZoom, layers.facilities).forEach((facility) => {
       const price = compactFacilityPrice(facility.price);
       const html = `<div class="facility-marker ${facility.openNow === false ? 'closed' : ''}">P</div>`;
       const icon = L.divIcon({ className: '', html, iconSize: [44, 44], iconAnchor: [22, 22] });
@@ -1304,10 +1606,10 @@ function App() {
         .bindTooltip([facility.name, price || facility.price].filter(Boolean).join(' · '), { direction: 'top', offset: [0, -18] })
         .on('click', () => { setSelected(null); setActiveFacility(facility.id); setMobilePanel('facility'); });
     });
-  }, [facilities, layers.street, mapZoom, t.closed, t.spaces]);
+  }, [facilities, layers.facilities, mapZoom, t.closed, t.spaces]);
 
   const layerItems = [
-    ['street', t.street, '#2d6df6'], ['zones', t.priceZones, '#79a0f5'], ['residents', t.residentZones, '#9671d1'],
+    ['street', t.street, '#2d6df6'], ['facilities', t.facilities, '#1d2923'], ['zones', t.priceZones, '#79a0f5'], ['residents', t.residentZones, '#9671d1'],
   ];
 
   const minimumParkingTime = ceilToFiveMinutes();
@@ -1327,10 +1629,10 @@ function App() {
   return (
     <main className="app-shell" aria-labelledby="app-title">
       <div className="sr-only">
-        <h1 id="app-title">{lang === 'fi' ? 'Helsingin pysäköintikartta' : 'Helsinki parking map'}</h1>
-        <p>{lang === 'fi' ? 'Tarkista kadunvarsipaikkojen maksullisuus, aikarajat, poikkeukset ja pysäköintihallit valitulle ajalle.' : 'Check on-street parking charges, time limits, exceptions and parking facilities for the selected time.'}</p>
+        <h1 id="app-title">{lang === 'fi' ? 'Pysäköintikartta' : 'Parking map'}</h1>
+        <p>{lang === 'fi' ? 'Tarkista Helsingin, Espoon, Vantaan ja Tampereen kadunvarsipaikkojen säännöt sekä lähialueen pysäköintikohteet.' : 'Check curb-parking rules in Helsinki, Espoo, Vantaa and Tampere, plus nearby parking facilities.'}</p>
       </div>
-      <div ref={mapNode} className="map" aria-label={lang === 'fi' ? 'Helsingin pysäköintikartta' : 'Helsinki parking map'} />
+      <div ref={mapNode} className="map" aria-label={lang === 'fi' ? 'Pysäköintikartta' : 'Parking map'} />
       <header className="topbar">
         <div className="time-picker-wrap" ref={timePickerRef} onKeyDown={(event) => { if (event.key === 'Escape') setTimeMenu(false); }}>
           <button className="time-control" aria-expanded={timeMenu} onClick={() => setTimeMenu((value) => !value)}>
@@ -1379,7 +1681,10 @@ function App() {
 
       {parkingZoomRequired && <button className={`map-status actionable ${location.message ? 'below-message' : ''}`} onClick={zoomToParking}><Crosshair size={16} /> {t.zoomIn}</button>}
       {!parkingZoomRequired && spotStatus === 'loading' && <div className={`map-status ${location.message ? 'below-message' : ''}`}><RefreshCw className="spin" size={14} /> {t.dataUpdating}…</div>}
-      {!parkingZoomRequired && spotStatus === 'error' && <div className={`map-status ${location.message ? 'below-message' : ''}`}><AlertTriangle size={14} /> {t.noMappedSpot}</div>}
+      {!parkingZoomRequired && spotStatus === 'partial' && <div className={`map-status ${location.message ? 'below-message' : ''}`}><AlertTriangle size={14} /> {t.partialData}</div>}
+      {!parkingZoomRequired && spotStatus === 'stale' && <div className={`map-status ${location.message ? 'below-message' : ''}`}><AlertTriangle size={14} /> {t.staleData}</div>}
+      {!parkingZoomRequired && spotStatus === 'unsupported' && <div className={`map-status ${location.message ? 'below-message' : ''}`}><AlertTriangle size={14} /> {t.curbUnsupported}</div>}
+      {!parkingZoomRequired && spotStatus === 'error' && <div className={`map-status ${location.message ? 'below-message' : ''}`}><AlertTriangle size={14} /> {t.dataUnavailable}</div>}
 
       <div className="map-legend" aria-label={lang === 'fi' ? 'Pysäköinnin värit' : 'Parking colours'}><span><i className="free-long" />{t.freeLongLegend}</span><span><i className="free-short" />{t.freeShortLegend}</span><span><i className="paid" />{t.paidLegend}</span><span><i className="unavailable" />{t.unavailableLegend}</span></div>
       <button className="source-trigger" aria-label={lang === 'fi' ? 'Tietoa palvelusta ja tietolähteistä' : 'About the service and data sources'} title={lang === 'fi' ? 'Tietoa palvelusta' : 'About this service'} onClick={() => setInfoOpen(true)}><Info size={20} /></button>

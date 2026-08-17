@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - scripts/update-parking-data.mjs
+      - src/parking-providers.js
       - .github/workflows/update-parking-data.yml
   schedule:
     # One short standard-runner job per week. Public-repository Actions are
-    # currently free. If that changes, disable this workflow; the app falls
-    # back to the source APIs after the committed snapshot becomes stale.
+    # currently free. The shared snapshot is fresh for 10 days; Vantaa remains
+    # available with a warning through day 31, while layers with runtime API
+    # fallbacks switch to their source APIs after day 10.
     - cron: '17 3 * * 0'
   workflow_dispatch:
 
@@ -25,7 +27,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -34,6 +36,13 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
 
       - name: Generate reference snapshot
         run: node scripts/update-parking-data.mjs
@@ -43,8 +52,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/data/parking-reference.json
+          git add public/data/parking-reference.json public/data/vantaa-parking.json public/data/vantaa-parking/ public/data/turku-parking.json
           if git diff --cached --quiet; then
+            echo "Reference data is already current"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "Update parking reference data"
@@ -52,7 +62,9 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Deploy updated snapshot
+      # Commits made with GITHUB_TOKEN do not trigger the push-based Pages
+      # workflow, so dispatch it explicitly after a scheduled data update.
+      - name: Deploy updated snapshots
         if: steps.commit.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}

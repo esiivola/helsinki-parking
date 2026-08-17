@@ -97,4 +97,18 @@ describe('parking detail card', () => {
     expect([card.headline, card.note]).toEqual(['Free', 'maximum 1 h']);
     expect(card.facts).toEqual(['Maximum1 h · assumed from the parking class']);
   });
+
+  it('shows a regional source note without inventing a Helsinki price', () => {
+    const card = render({ properties: { parking: {
+      provider: 'service-map', municipality: 'vantaa', kind: 'paid', hourlyPrice: null,
+      maxStayMinutes: null, schedule: null, rawLabel: 'Tikkurilan kirjasto · Maksullinen',
+      notes: 'Maksullinen. 1. tunti maksuton.', estimatedSpaces: 16,
+    } } });
+    expect(card.headline).toBe('Maksullinen');
+    expect(card.note).toBe('maksulliset ajat tarkistettava');
+    expect(card.details).toContain('Paikkamäärä16');
+    expect(card.details).toContain('Aineiston sääntöTikkurilan kirjasto · Maksullinen');
+    expect(card.details).toContain('Lisätieto aineistossaMaksullinen. 1. tunti maksuton.');
+    expect(card.headline).not.toContain('4 €/h');
+  });
 });

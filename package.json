@@ -8,7 +8,8 @@
     "build": "vite build --base=./",
     "preview": "vite preview",
     "test": "vitest run",
-    "audit:parking": "node scripts/audit-parking-classes.mjs"
+    "audit:parking": "node scripts/audit-parking-classes.mjs",
+    "audit:regional": "node scripts/audit-regional-rules.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
