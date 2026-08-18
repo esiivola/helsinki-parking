@@ -266,19 +266,17 @@ describe('parking map helpers', () => {
     expect(parkingFeatureAt([24.945, 60.175], restricted, [restricted])).toBeNull();
   });
 
-  it('only loads street-space polygons at the detailed map zoom', () => {
-    expect(shouldLoadParkingSpots(15)).toBe(false);
-    expect(shouldLoadParkingSpots(16)).toBe(true);
-    // The default opens on a wider overview, so no spots load until the user
-    // zooms in — the coverage overlay guides them there.
-    expect(DEFAULT_MAP_ZOOM).toBeLessThan(16);
-    expect(shouldLoadParkingSpots(DEFAULT_MAP_ZOOM)).toBe(false);
+  it('loads street-space polygons from the default overview zoom', () => {
+    expect(shouldLoadParkingSpots(14)).toBe(false);
+    expect(shouldLoadParkingSpots(15)).toBe(true);
+    // The default now opens at the same zoom where data loads.
+    expect(shouldLoadParkingSpots(DEFAULT_MAP_ZOOM)).toBe(true);
   });
 
-  it('keeps the parking-area zoom prompt visible until the detailed zoom', () => {
-    expect(shouldShowParkingZoomHint(15, true)).toBe(true);
-    expect(shouldShowParkingZoomHint(16, true)).toBe(false);
-    expect(shouldShowParkingZoomHint(15, false)).toBe(false);
+  it('keeps the parking-area zoom prompt visible only below the loading zoom', () => {
+    expect(shouldShowParkingZoomHint(14, true)).toBe(true);
+    expect(shouldShowParkingZoomHint(15, true)).toBe(false);
+    expect(shouldShowParkingZoomHint(14, false)).toBe(false);
   });
 
   it('labels payment and resident zones with their official identifiers', () => {

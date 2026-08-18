@@ -29,12 +29,12 @@ const SERVICE_MAP_FACILITIES = 'https://api.hel.fi/servicemap/v2/unit/?service=5
 const OVERPASS = import.meta.env.DEV ? '/api/overpass/api/interpreter' : 'https://overpass-api.de/api/interpreter';
 const REFERENCE_DATA = `${import.meta.env.BASE_URL}data/parking-reference.json`;
 const VANTAA_DATA = `${import.meta.env.BASE_URL}data/vantaa-parking.json`;
-const MIN_PARKING_ZOOM = 16;
+const MIN_PARKING_ZOOM = 15;
 const MIN_FACILITY_ZOOM = 14;
-// Open on a wider overview than the spot-loading zoom: the coverage overlay
-// guides the user to where curb data exists, and no per-space data loads until
-// they zoom in — so the wider default stays as fast as before.
-export const DEFAULT_MAP_ZOOM = 13;
+// Open on the same zoom at which spots load, one step wider than the old
+// street-level default, so the map shows parking data straight away on a usable
+// overview. The coverage overlay only appears if the user zooms out past this.
+export const DEFAULT_MAP_ZOOM = MIN_PARKING_ZOOM;
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, value) => String(value).padStart(2, '0'));
 const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, value) => String(value * 5).padStart(2, '0'));
 const CACHE_PREFIX = 'regional-parking:v4:';
@@ -1416,7 +1416,7 @@ function App() {
       if (shouldReuseParkingSpotCache(cached, viewport)) return Promise.resolve({ provider, features: cached.features, stale: Boolean(cached.stale) });
       let request;
       if (provider === 'helsinki') {
-        request = jsonWithTimeout(wfsUrl('Pysakointipaikat_alue', { bounds: requestBounds, count: 2000 }), 18000, controller.signal)
+        request = jsonWithTimeout(wfsUrl('Pysakointipaikat_alue', { bounds: requestBounds, count: 6000 }), 18000, controller.signal)
           .then((data) => ({ features: [...(data.features || []).filter(isGeneralParkingFeature), ...filterFeaturesToBounds(EVENT_PARKING_LOTS, requestBounds)], stale: false }));
       } else if (provider === 'espoo') {
         request = textWithTimeout(espooParkingUrl(requestBounds, 5000), 22000, controller.signal)
