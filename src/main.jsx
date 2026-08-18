@@ -28,7 +28,6 @@ const SERVICE_MAP_FACILITIES = 'https://api.hel.fi/servicemap/v2/unit/?service=5
 const OVERPASS = import.meta.env.DEV ? '/api/overpass/api/interpreter' : 'https://overpass-api.de/api/interpreter';
 const REFERENCE_DATA = `${import.meta.env.BASE_URL}data/parking-reference.json`;
 const VANTAA_DATA = `${import.meta.env.BASE_URL}data/vantaa-parking.json`;
-const TURKU_DATA = `${import.meta.env.BASE_URL}data/turku-parking.json`;
 const MIN_PARKING_ZOOM = 16;
 const MIN_FACILITY_ZOOM = 14;
 export const DEFAULT_MAP_ZOOM = MIN_PARKING_ZOOM;
@@ -43,7 +42,6 @@ const pendingJsonRequests = new Map();
 let referenceSnapshotPromise;
 let vantaaManifestPromise;
 const vantaaTilePromises = new Map();
-let turkuSnapshotPromise;
 
 export function writeJsonCache(storage, key, value, now = Date.now()) {
   if (!storage) return false;
@@ -98,7 +96,7 @@ const copy = {
     appName: 'PARKKI', region: 'Suomi', locating: 'Haetaan sijaintia…', locationReady: 'Sijaintisi', locationFallback: 'Helsingin keskusta',
     when: 'Pysäköintiaika', date: 'Päivä', time: 'Kellonaika', today: 'Tänään', now: 'Nyt', paidUntil: 'Maksullinen asti', chargingStarts: 'Maksu alkaa', maxStay: 'Enintään', mapHint: 'Valitse pysäköintipaikka kartalta', detailsSummary: 'Lisätiedot',
     freeLegend: 'Maksuton', freeLongLegend: 'Maksuton', freeShortLegend: 'Maksuton, enintään 1 h', paidLegend: 'Maksullinen', unavailableLegend: 'Väliaikaisesti poissa käytöstä', freeLabel: 'Vapaa', paidLabel: 'Maksullinen', unavailableLabel: 'Väliaikaisesti poissa käytöstä', upcomingException: 'Tuleva poikkeus', activeException: 'Voimassa oleva poikkeus', starts: 'Alkaa', ends: 'Päättyy', noTimeLimit: 'ei aikarajaa', limitUnknown: 'aikaraja ei tiedossa', scheduleUnknown: 'maksulliset ajat tarkistettava', banUnknown: 'kieltoajat tarkistettava', withDisc: 'kiekolla', assumedStay: 'paikkaluokan oletus', parkingClass: 'Paikkaluokka', banHours: 'Pysäköintikielto', stayHours: 'Aikaraja voimassa',
-    mapLayers: 'Karttatasot', street: 'Kadunvarsipaikat', facilities: 'Pysäköintikohteet', priceZones: 'Helsingin maksuvyöhykkeet', residentZones: 'Asukas- ja lupavyöhykkeet', closures: 'Työt ja tapahtumat', removals: 'Siirtokehotukset',
+    mapLayers: 'Karttatasot', street: 'Kadunvarsipaikat', facilities: 'Pysäköintikohteet', priceZones: 'Helsingin maksuvyöhykkeet', residentZones: 'Helsingin asukasvyöhykkeet', closures: 'Työt ja tapahtumat', removals: 'Siirtokehotukset',
     here: 'Tässä paikassa', tapHint: 'Napauta kartalta pysäköintipaikkaa', noMappedSpot: 'Ei tunnistettua pysäköintipaikkaa', noMappedSpotBody: 'Tälle pisteelle ei löytynyt avointa paikkatietoa. Tarkista aina liikennemerkki.',
     paid: 'Maksullinen pysäköinti', free: 'Maksuton pysäköinti', disc: 'Kiekkopaikka', offPeak: 'Maksuton kieltoajan ulkopuolella', prohibited: 'Pysäköinti kielletty', disabled: 'Invapaikka', loading: 'Kuormauspaikka', taxi: 'Taksiasema', charging: 'Sähköauton latauspaikka', scooter: 'Sähköpotkulautapaikka', bicycle: 'Polkupyöräpaikka', motorcycle: 'Moottoripyöräpaikka', coach: 'Matkailuliikenteen paikka', permitOnly: 'Vain luvalla', restricted: 'Rajoitettu pysäköinti', unknown: 'Pysäköintitiedot puuttuvat',
     perHour: '/ tunti', freeNow: 'Maksuton nyt', paidNow: 'Maksullinen nyt', nextFree: 'Maksuton klo 21 jälkeen', saturdayFree: 'Maksuton klo 18 jälkeen', allDayFree: 'Maksuton koko päivän',
@@ -107,13 +105,13 @@ const copy = {
     nearby: 'Pysäköintikohteet lähellä', parkingHall: 'Pysäköintikohde', live: 'Ajantasainen', open: 'Avoinna', closed: 'Suljettu', statusUnknown: 'Aukioloaika ei tiedossa', spaces: 'paikkaa vapaana', totalSpaces: 'Paikkoja yhteensä', priceUnavailable: 'Hinta ei tiedossa', forecast: 'Arvio 2 tunnin kuluttua', facilitiesLoading: 'Haetaan pysäköintikohteita…', facilitiesEmpty: 'Lähistöltä ei löytynyt pysäköintikohteita.', openingHours: 'Aukioloajat', operator: 'Ylläpitäjä', paymentMethods: 'Maksutavat', officialSite: 'Tarkista hinnat ja aukioloajat',
     sources: 'Tietolähteet', advisory: 'Liikennemerkki ratkaisee', disclaimer: 'Sivustolle kootut tiedot voivat olla vanhentuneita tai vääriä. Tarkista aina liikennemerkki ennen pysäköintiä',
     locate: 'Näytä sijaintini', refresh: 'Päivitä tiedot', close: 'Sulje', details: 'Tiedot', showList: 'Lähialueen kohteet', dataUpdated: 'Tiedot päivitetty', dataUpdating: 'Päivitetään tietoja', spotCount: 'pysäköintipaikkaa kartalla', zoomIn: 'Lähennä karttaa nähdäksesi pysäköintipaikat', hour: 'Tunti', minute: 'Minuutti', partialData: 'Osa pysäköintilähteistä ei vastaa', staleData: 'Vantaan pysäköintitiedot ovat yli 10 päivää vanhoja · tarkista liikennemerkki', curbUnsupported: 'Kauniaisten kadunvarsisäännöille ei ole avointa rajapintaa · tarkista liikennemerkki', dataUnavailable: 'Pysäköintitietoja ei voitu ladata',
-    permissions: 'Sijaintia ei voitu käyttää', privacy: 'Sijaintitietoa käsitellään vain selaimessasi.', more: 'Lisätiedot', cc: '© Helsinki, Espoo, Vantaa, Tampere, Turku / HRI / Palvelukartta / Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
+    permissions: 'Sijaintia ei voitu käyttää', privacy: 'Sijaintitietoa käsitellään vain selaimessasi.', more: 'Lisätiedot', cc: '© Helsinki, Espoo, Vantaa, Tampere / HRI / Palvelukartta / Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
   },
   en: {
     appName: 'PARKKI', region: 'Finland', locating: 'Finding your location…', locationReady: 'Your location', locationFallback: 'Helsinki city centre',
     when: 'Parking time', date: 'Date', time: 'Time', today: 'Today', now: 'Now', paidUntil: 'Paid until', chargingStarts: 'Charging starts', maxStay: 'Maximum', mapHint: 'Choose a parking space on the map', detailsSummary: 'Details',
     freeLegend: 'Free', freeLongLegend: 'Free', freeShortLegend: 'Free, max 1 h', paidLegend: 'Paid', unavailableLegend: 'Unavailable', freeLabel: 'Free', paidLabel: 'Paid', unavailableLabel: 'Temporarily unavailable', upcomingException: 'Upcoming exception', activeException: 'Active exception', starts: 'Starts', ends: 'Ends', noTimeLimit: 'no time limit', limitUnknown: 'time limit unknown', scheduleUnknown: 'chargeable hours must be checked', banUnknown: 'no-parking hours must be checked', withDisc: 'with parking disc', assumedStay: 'assumed from the parking class', parkingClass: 'Parking class', banHours: 'No parking', stayHours: 'Time limit in force',
-    mapLayers: 'Map layers', street: 'On-street spaces', facilities: 'Parking facilities', priceZones: 'Helsinki payment zones', residentZones: 'Resident & permit zones', closures: 'Works and events', removals: 'Relocation notices',
+    mapLayers: 'Map layers', street: 'On-street spaces', facilities: 'Parking facilities', priceZones: 'Helsinki payment zones', residentZones: 'Helsinki resident zones', closures: 'Works and events', removals: 'Relocation notices',
     here: 'At this location', tapHint: 'Tap a parking space on the map', noMappedSpot: 'No mapped parking space', noMappedSpotBody: 'Open data has no parking record for this point. Always check the street sign.',
     paid: 'Paid parking', free: 'Free parking', disc: 'Time-limited parking', offPeak: 'Free outside the no-parking hours', prohibited: 'No parking', disabled: 'Accessible parking', loading: 'Loading zone', taxi: 'Taxi rank', charging: 'EV charging space', scooter: 'E-scooter parking', bicycle: 'Bicycle parking', motorcycle: 'Motorcycle parking', coach: 'Tourist coach space', permitOnly: 'Permit holders only', restricted: 'Restricted parking', unknown: 'Parking rules unavailable',
     perHour: '/ hour', freeNow: 'Free now', paidNow: 'Paid now', nextFree: 'Free after 21:00', saturdayFree: 'Free after 18:00', allDayFree: 'Free all day',
@@ -122,7 +120,7 @@ const copy = {
     nearby: 'Nearby parking facilities', parkingHall: 'Parking facility', live: 'Live', open: 'Open', closed: 'Closed', statusUnknown: 'Opening hours unavailable', spaces: 'spaces available', totalSpaces: 'Total spaces', priceUnavailable: 'Price unavailable', forecast: 'Estimate in 2 hours', facilitiesLoading: 'Finding parking facilities…', facilitiesEmpty: 'No parking facilities were found nearby.', openingHours: 'Opening hours', operator: 'Operator', paymentMethods: 'Payment methods', officialSite: 'Check prices and opening hours',
     sources: 'Data sources', advisory: 'Street signs are final', disclaimer: 'Information collected on this site may be outdated or incorrect. Always check the traffic sign before parking.',
     locate: 'Show my location', refresh: 'Refresh data', close: 'Close', details: 'Details', showList: 'Nearby facilities', dataUpdated: 'Data updated', dataUpdating: 'Updating data', spotCount: 'spaces on map', zoomIn: 'Zoom in to see parking spaces', hour: 'Hour', minute: 'Minute', partialData: 'Some parking sources are unavailable', staleData: 'Vantaa parking data is more than 10 days old · check the street sign', curbUnsupported: 'No open curb-rule API is available for Kauniainen · check the street sign', dataUnavailable: 'Parking data could not be loaded',
-    permissions: 'Location could not be used', privacy: 'Your location is processed only in this browser.', more: 'More information', cc: '© Helsinki, Espoo, Vantaa, Tampere, Turku / HRI / Service Map / Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
+    permissions: 'Location could not be used', privacy: 'Your location is processed only in this browser.', more: 'More information', cc: '© Helsinki, Espoo, Vantaa, Tampere / HRI / Service Map / Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
   },
 };
 
@@ -135,7 +133,6 @@ const sourceInfo = {
       { name: 'Espoon pysäköintialueet', detail: 'Espoon yleisten alueiden rekisteri: aluekohtainen paikkamäärä, aikaraja ja maksuvyöhyke. Maksullisuus päivittyy kylttien käyttöönoton mukaan.', href: 'https://hri.fi/data/fi/dataset/espoon-kaupungin-yleisten-alueiden-rekisteri' },
       { name: 'Vantaan pysäköintialueet', detail: 'Pääkaupunkiseudun Palvelukartta: aikarajat, maksullisuusajat, paikkamäärät ja lähdekohtaiset lisätiedot. Hinta yhdistetään Palvelukartan maksuvyöhykkeestä.', href: 'https://hri.fi/data/fi/dataset/paakaupunkiseudun-palvelukartan-rest-rajapinta' },
       { name: 'Tampereen pysäköintipaikat', detail: 'Tampereen kaupunki / geodata.tampere.fi: maksuvyöhykkeet, aikarajat sekä maksu- ja kiekkoajat viikonpäivittäin. Tuntihinta lisätään kaupungin julkaisemasta vyöhykehinnastosta.', href: 'https://data.tampere.fi/data/dataset/tampereen-keskustan-maksulliset-pysakointialueet' },
-      { name: 'Turun maksu- ja lupavyöhykkeet', detail: 'Turun kaupunki: kadunvarsipysäköinnin maksuvyöhykkeet (tuntihinta ja maksulliset ajat viikonpäivittäin) sekä asukas- ja yrityspysäköinnin lupavyöhykkeet omana karttatasonaan.', href: 'https://www.avoindata.fi/data/fi/dataset/turun-kaupungin-pysakoinnin-maksuvyohykkeet' },
       { name: 'Kauniainen', detail: 'Kaupungilla ei ole avointa, paikkakohtaista kadunvarsipysäköinnin sääntörajapintaa. Kartta näyttää saatavilla olevat liityntäpysäköinti- ja muut pysäköintikohteet.', href: 'https://www.kauniainen.fi/asuminen-ja-ymparisto/liikenne/pysakointi-ja-pysakoinninvalvonta/' },
       { name: 'Pysäköintikohteet', detail: 'Fintraffic LIIPI, Palvelukartta ja OpenStreetMap: liityntäpysäköinti, yleiset pysäköintialueet ja hallit. LIIPI-tiedot ovat viikoittainen tilannekuva, eivät live-saatavuutta.', href: 'https://parking.fintraffic.fi/docs/index.html' },
       { name: 'Taustakartta', detail: 'OpenStreetMapin karttatiedot ja CARTOn karttatiilet.', href: 'https://www.openstreetmap.org/copyright' },
@@ -151,7 +148,6 @@ const sourceInfo = {
       { name: 'Espoo parking areas', detail: 'Espoo public-areas register: area-level capacity, time limits and payment zone. Paid-parking rollout remains sign-driven.', href: 'https://hri.fi/data/en_GB/dataset/espoon-kaupungin-yleisten-alueiden-rekisteri' },
       { name: 'Vantaa parking areas', detail: 'Helsinki metropolitan area Service Map: time limits, chargeable hours, capacity and source notes. Hourly prices are joined from its pay-zone polygons.', href: 'https://hri.fi/data/en/dataset/paakaupunkiseudun-palvelukartan-rest-rajapinta' },
       { name: 'Tampere parking spaces', detail: 'City of Tampere / geodata.tampere.fi: payment zones, time limits and paid/disc hours by day type. Hourly prices are added from the city\'s published zone tariff.', href: 'https://data.tampere.fi/data/dataset/tampereen-keskustan-maksulliset-pysakointialueet' },
-      { name: 'Turku payment & permit zones', detail: 'City of Turku: on-street payment zones (hourly price and chargeable hours by day type) plus the resident/company permit districts shown as their own map layer.', href: 'https://www.avoindata.fi/data/en/dataset/turun-kaupungin-pysakoinnin-maksuvyohykkeet' },
       { name: 'Kauniainen', detail: 'No open API publishes space-specific curb rules. Available Park & Ride and other parking facilities are still shown.', href: 'https://www.kauniainen.fi/sv/boende-och-miljo/trafik/parkering-och-parkeringsovervakning/' },
       { name: 'Parking facilities', detail: 'Fintraffic LIIPI, Service Map and OpenStreetMap provide Park & Ride, public lots and garages. LIIPI data is a weekly snapshot, not live availability.', href: 'https://parking.fintraffic.fi/docs/index.html' },
       { name: 'Base map', detail: 'OpenStreetMap map data and CARTO map tiles.', href: 'https://www.openstreetmap.org/copyright' },
@@ -914,42 +910,6 @@ async function getVantaaFeatures(bounds) {
   return { features: filterFeaturesToBounds(features, bounds), stale };
 }
 
-// Turku ships as one small static FeatureCollection (three payment zones), so it
-// needs neither pagination nor tiling — load it once, then filter to the view.
-// Turku's zones change rarely, so an old snapshot is still shown rather than
-// blocked; the sign-is-final disclaimer already covers staleness.
-export function isTurkuSnapshotUsable(snapshot, now = Date.now()) {
-  const generatedAt = new Date(snapshot?.generatedAt || '').getTime();
-  return snapshot?.schemaVersion === 1
-    && Number.isFinite(generatedAt)
-    && now - generatedAt >= -SNAPSHOT_FUTURE_TOLERANCE
-    && Array.isArray(snapshot?.features)
-    && snapshot.features.length > 0;
-}
-
-function getTurkuSnapshot() {
-  if (!turkuSnapshotPromise) {
-    turkuSnapshotPromise = jsonWithTimeout(TURKU_DATA, 12000)
-      .then((snapshot) => {
-        if (!isTurkuSnapshotUsable(snapshot)) throw new Error('Invalid or expired Turku parking snapshot');
-        return snapshot;
-      })
-      .catch((error) => { turkuSnapshotPromise = undefined; throw error; });
-  }
-  return turkuSnapshotPromise;
-}
-
-function getTurkuFeatures(bounds) {
-  return getTurkuSnapshot().then((snapshot) => ({ features: filterFeaturesToBounds(snapshot.features, bounds), stale: false }));
-}
-
-// Resident/permit districts render in the shared resident-zone overlay, so the
-// caller merges them into mapData.residents. A missing snapshot resolves to none
-// rather than breaking Helsinki's residents.
-function getTurkuResidentZones() {
-  return getTurkuSnapshot().then((snapshot) => (Array.isArray(snapshot.residentZones) ? snapshot.residentZones : [])).catch(() => []);
-}
-
 function createAbortController() {
   const Controller = typeof AbortController === 'function' ? AbortController : null;
   if (Controller) {
@@ -1212,11 +1172,6 @@ function App() {
   const [timeMenu, setTimeMenu] = useState(false);
   const [layers, setLayers] = useState({ street: true, facilities: true, zones: false, residents: false });
   const [mapData, setMapData] = useState({ zones: [], residents: [], closures: [] });
-  // Turku's permit-zone overlay is fetched only once the map reaches Turku, so
-  // metro users never download another city's data. Kept out of mapData so the
-  // Helsinki resident load never races with or overwrites it.
-  const [turkuResidents, setTurkuResidents] = useState([]);
-  const turkuResidentsRef = useRef(false);
   const [removalNotices, setRemovalNotices] = useState([]);
   const [serviceMap, setServiceMap] = useState(null);
   const [spots, setSpots] = useState([]);
@@ -1409,12 +1364,6 @@ function App() {
     const providers = providerIdsForBounds(requestBounds);
     const center = map.getCenter();
     const municipality = municipalityForPoint([center.lat, center.lng]);
-    // Pull Turku's permit-zone overlay only once the view reaches Turku; the same
-    // cached snapshot already serves the paid spots requested below.
-    if (providers.includes('turku') && !turkuResidentsRef.current) {
-      turkuResidentsRef.current = true;
-      getTurkuResidentZones().then((zones) => { if (zones.length) setTurkuResidents(zones); }).catch(() => { turkuResidentsRef.current = false; });
-    }
     if (!providers.length) { setSpots([]); setSpotStatus(parkingSpotLoadStatus(municipality, 0, 0, 0)); return; }
     parkingAbort.current?.abort();
     const controller = createAbortController();
@@ -1433,9 +1382,6 @@ function App() {
       } else if (provider === 'tampere') {
         request = jsonWithTimeout(tampereParkingUrl(requestBounds, 4000), 18000, controller.signal)
           .then((data) => ({ features: parseTampereParking(data).filter(isGeneralParkingFeature), stale: false }));
-      } else if (provider === 'turku') {
-        request = getTurkuFeatures(requestBounds)
-          .then((result) => ({ ...result, features: result.features.filter(isGeneralParkingFeature) }));
       } else {
         request = getVantaaFeatures(requestBounds)
           .then((result) => ({ ...result, features: result.features.filter(isGeneralParkingFeature) }));
@@ -1480,11 +1426,11 @@ function App() {
       style: (feature) => ({ color: feature.properties.vyohykkeen_nro === '1' ? '#155eef' : '#6094ff', weight: 2, fillColor: feature.properties.vyohykkeen_nro === '1' ? '#2d6df6' : '#85aaff', fillOpacity: 0.10, dashArray: '7 6' }),
       onEachFeature: (feature, layer) => { const label = parkingAreaLabel(feature, 'payment', lang); if (label) layer.bindTooltip(label, { permanent: true, direction: 'center', className: 'area-zone-label payment', opacity: 1 }); },
     }).addTo(groups.zones);
-    if (layers.residents) L.geoJSON([...mapData.residents, ...turkuResidents], {
+    if (layers.residents) L.geoJSON(mapData.residents, {
       style: { color: '#7d52c8', weight: 1.7, fillColor: '#ae8fe6', fillOpacity: 0.10, dashArray: '4 5' },
       onEachFeature: (feature, layer) => { const label = parkingAreaLabel(feature, 'resident', lang); if (label) layer.bindTooltip(label, { permanent: true, direction: 'center', className: 'area-zone-label resident', opacity: 1 }); },
     }).addTo(groups.residents);
-  }, [mapData.zones, mapData.residents, turkuResidents, layers, lang]);
+  }, [mapData.zones, mapData.residents, layers, lang]);
 
   useEffect(() => {
     const group = layersRef.current.spots;

@@ -10,7 +10,7 @@
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { classifyParkingSpot, nextPaidStart, parkingNowStatus, parseParkingValidity } from '../src/parking-rules.js';
-import { espooParkingUrl, normalizeVantaaDivision, parseEspooParkingGml, parseTampereParking, parseTurkuParking, parseTurkuResidentZones, tampereParkingUrl, turkuParkingUrl, turkuResidentZonesUrl } from '../src/parking-providers.js';
+import { espooParkingUrl, normalizeVantaaDivision, parseEspooParkingGml, parseTampereParking, tampereParkingUrl } from '../src/parking-providers.js';
 
 const AT = new Date('2026-08-18T10:00:00'); // fixed weekday morning for the status round-trip
 const REPO = new URL('..', import.meta.url);
@@ -133,31 +133,12 @@ async function tampereRows() {
   }));
 }
 
-async function turkuRows() {
-  const [paid, permit] = await Promise.all([fetchJson(turkuParkingUrl()), fetchJson(turkuResidentZonesUrl())]);
-  const paidByZone = new Map(paid.features.map((f) => [String(f.properties.maksuvyohyke), f.properties]));
-  const rows = parseTurkuParking(paid).map((f) => {
-    const p = paidByZone.get(f.properties.parking.zone) || {};
-    return {
-      rawKey: `vyohyke=${p.maksuvyohyke} hinta="${p.maksuvyohykehinta}" arki="${p.maksullisuus_arki}" la="${p.maksullisuus_lauantai}" su="${p.maksullisuus_sunnuntai}"`,
-      rawText: [f.properties.parking.rawLabel, f.properties.parking.scheduleLabel].filter(Boolean).join(' | '),
-      feature: f,
-      zone: f.properties.parking.zone,
-    };
-  });
-  // Permit zones carry no parking contract (overlay only); just list them.
-  const permitZones = parseTurkuResidentZones(permit);
-  console.log(`\n(Turku permit overlay: ${permitZones.length} zones ${permitZones.map((z) => z.properties.asukaspysakointitunnus).join('')} with prices ${[...new Set(permit.features.map((f) => f.properties.Hinta))].join(' / ')})`);
-  return rows;
-}
-
 async function main() {
   const summaries = [];
   summaries.push(report('Helsinki', helsinkiRows()));
   try { summaries.push(report('Espoo', await espooRows())); } catch (e) { console.log('\nEspoo fetch failed:', e.message); }
   summaries.push(report('Vantaa', vantaaRows()));
   try { summaries.push(report('Tampere', await tampereRows())); } catch (e) { console.log('\nTampere fetch failed:', e.message); }
-  try { summaries.push(report('Turku', await turkuRows())); } catch (e) { console.log('\nTurku fetch failed:', e.message); }
 
   console.log('\n================ SUMMARY ================');
   summaries.forEach((s) => console.log(`${s.city.padEnd(9)} distinct=${String(s.distinct).padStart(4)}  flaggedDistinct=${s.flaggedDistinct}  flaggedFeatures=${s.flaggedFeatures}`));

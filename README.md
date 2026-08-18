@@ -1,12 +1,12 @@
 # Pysäköintikartta
 
-Selkeä, mobiilikäyttöön suunniteltu karttapalvelu Helsingin, Espoon, Vantaan, Tampereen ja Turun pysäköinnin tarkistamiseen.
+Selkeä, mobiilikäyttöön suunniteltu karttapalvelu Helsingin, Espoon, Vantaan ja Tampereen pysäköinnin tarkistamiseen.
 
 **[Avaa pysäköintikartta](https://esiivola.github.io/helsinki-parking/)**
 
 ## Mitä palvelu näyttää
 
-- Kadunvarsipaikkojen maksullisuus ja aikarajat Helsingissä, Espoossa, Vantaalla, Tampereella ja Turussa
+- Kadunvarsipaikkojen maksullisuus ja aikarajat Helsingissä, Espoossa, Vantaalla ja Tampereella
 - Lähialueen pysäköintihallit, yleiset pysäköintialueet ja liityntäpysäköinti
 - Helsingin tilapäiset poikkeukset, siirtokehotukset sekä maksu- ja asukaspysäköintivyöhykkeet
 - Suomen- ja englanninkielinen käyttöliittymä
@@ -17,15 +17,15 @@ Liikennemerkki ja paikalla oleva opastus ratkaisevat aina. Avoin data voi olla p
 
 ## Alueellinen kattavuus
 
-| Tieto | Helsinki | Espoo | Vantaa | Tampere | Turku | Kauniainen |
-| --- | --- | --- | --- | --- | --- | --- |
-| Kadunvarsipaikkojen alueet ja säännöt | Kyllä | Kyllä | Kyllä | Kyllä | Vyöhyketasolla | Ei avointa sääntöaineistoa |
-| Pysäköintilaitokset ja liityntäpysäköinti | LIIPI, Palvelukartta ja OSM | LIIPI, Palvelukartta ja OSM | LIIPI, Palvelukartta ja OSM | OSM | OSM | LIIPI ja OSM, lähteiden kattavuuden mukaan |
-| Erillinen maksuvyöhykekerros | Helsinki | Ei | Ei | Ei | Ei | Ei |
-| Asukaspysäköintivyöhykkeet | Helsinki | Ei | Ei | Ei | Ei | Ei |
-| Tilapäiset työt ja siirtokehotukset | Helsinki | Ei | Ei | Ei | Ei | Ei |
+| Tieto | Helsinki | Espoo | Vantaa | Tampere | Kauniainen |
+| --- | --- | --- | --- | --- | --- |
+| Kadunvarsipaikkojen alueet ja säännöt | Kyllä | Kyllä | Kyllä | Kyllä | Ei avointa sääntöaineistoa |
+| Pysäköintilaitokset ja liityntäpysäköinti | LIIPI, Palvelukartta ja OSM | LIIPI, Palvelukartta ja OSM | LIIPI, Palvelukartta ja OSM | OSM | LIIPI ja OSM, lähteiden kattavuuden mukaan |
+| Erillinen maksuvyöhykekerros | Helsinki | Ei | Ei | Ei | Ei |
+| Asukaspysäköintivyöhykkeet | Helsinki | Ei | Ei | Ei | Ei |
+| Tilapäiset työt ja siirtokehotukset | Helsinki | Ei | Ei | Ei | Ei |
 
-Espoon, Vantaan ja Tampereen maksullisuus sekä aikarajat tulevat suoraan niiden pysäköintialueiden ominaisuustiedoista. Tampereen tiedot haetaan suoraan kaupungin WFS-rajapinnasta karttaa selatessa; Turun aineisto haetaan päivitysajossa valmiiksi, koska rajapinta ei salli selainkutsuja. Turun kattavuus on vyöhyketasolla: kartalla näkyvät keskustan kolme maksuvyöhykettä hintoineen ja maksullisine aikoineen sekä asukas- ja yrityspysäköinnin lupavyöhykkeet (A–M) omana karttatasonaan. Taulukon maksuvyöhykekerros tarkoittaa erillistä karttatasoa, joka on saatavilla vain Helsingistä.
+Espoon, Vantaan ja Tampereen maksullisuus sekä aikarajat tulevat suoraan niiden pysäköintialueiden ominaisuustiedoista. Tampereen tiedot haetaan suoraan kaupungin WFS-rajapinnasta karttaa selatessa. Vain aluetason vyöhykeaineistoa tarjoavia kaupunkeja (esim. Turku, jolta ei ole paikkakohtaista kadunvarsiaineistoa) ei toistaiseksi näytetä. Taulukon maksuvyöhykekerros tarkoittaa erillistä karttatasoa, joka on saatavilla vain Helsingistä.
 
 ## Tietolähteet
 
@@ -35,7 +35,6 @@ Palvelu yhdistää seuraavia avoimia aineistoja:
 - [Espoon yleisten alueiden rekisteri](https://hri.fi/data/en_GB/dataset/espoon-kaupungin-yleisten-alueiden-rekisteri), josta käytetään pysäköintitiedot sisältävää katualueaineistoa
 - [Pääkaupunkiseudun Palvelukartta](https://hri.fi/data/en/dataset/paakaupunkiseudun-palvelukartan-rest-rajapinta), josta käytetään Vantaan pysäköintialueiden sääntöjä ja alueellisia pysäköintikohteita
 - [Tampereen pysäköintipaikat](https://data.tampere.fi/data/dataset/tampereen-keskustan-maksulliset-pysakointialueet), josta käytetään maksuvyöhykkeet, aikarajat sekä maksu- ja kiekkoajat
-- [Turun pysäköinnin maksuvyöhykkeet](https://www.avoindata.fi/data/fi/dataset/turun-kaupungin-pysakoinnin-maksuvyohykkeet), josta käytetään keskustan maksuvyöhykkeet, tuntihinnat ja maksulliset ajat
 - [Fintraffic LIIPI](https://parking.fintraffic.fi/docs/index.html), josta käytetään pysäköintilaitosten ja liityntäpysäköinnin tietoja
 - [OpenStreetMap](https://www.openstreetmap.org/copyright), jota käytetään täydentävänä pysäköintikohteiden lähteenä
 

@@ -52,7 +52,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/data/parking-reference.json public/data/vantaa-parking.json public/data/vantaa-parking/ public/data/turku-parking.json
+          git add public/data/parking-reference.json public/data/vantaa-parking.json public/data/vantaa-parking/
           if git diff --cached --quiet; then
             echo "Reference data is already current"
             echo "changed=false" >> "$GITHUB_OUTPUT"

@@ -10,13 +10,9 @@ import {
   normalizeVantaaParking,
   parseEspooParkingGml,
   parseTampereParking,
-  parseTurkuParking,
-  parseTurkuResidentZones,
   providerIdsForBounds,
   regionalSchedule,
   tampereParkingUrl,
-  turkuParkingUrl,
-  turkuResidentZonesUrl,
   vantaaParkingUrl,
   vantaaPayZonePrice,
 } from './parking-providers.js';
@@ -347,80 +343,6 @@ describe('regional parking providers', () => {
     expect(kind['tampere:pysakointi:110']).toBe('permitOnly');
     // Everything except the disc rows is excluded from the tappable car layer.
     expect(rows.filter((r) => isGeneralParkingFeature(r)).map((r) => r.id)).toEqual(['tampere:pysakointi:104', 'tampere:pysakointi:109']);
-  });
-
-  it('routes the Turku coverage box and builds its OGC API request', () => {
-    expect(providerIdsForBounds({ west: 22.20, south: 60.43, east: 22.30, north: 60.47 })).toEqual(['turku']);
-    expect(municipalityForPoint([60.4518, 22.2666])).toBe('turku');
-    const url = new URL(turkuParkingUrl());
-    expect(url.hostname).toBe('turku.asiointi.fi');
-    expect(url.pathname).toContain('Pysakoinnin_maksuvyohykkeet');
-    expect(url.searchParams.get('f')).toBe('json');
-  });
-
-  it('normalizes Turku payment zones with price, paid hours and 2-D geometry', () => {
-    const features = parseTurkuParking({
-      type: 'FeatureCollection',
-      features: [
-        // Second in source order, first after the numeric id sort.
-        { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[22.25, 60.45, 0], [22.26, 60.45, 0], [22.26, 60.46, 0], [22.25, 60.45, 0]]] }, properties: { maksuvyohyke: '3', maksuvyohykehinta: '0,6 €/h', maksullisuus_arki: '9-18', maksullisuus_lauantai: '9-15', maksullisuus_sunnuntai: 'ei maksua' } },
-        { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[22.25, 60.45], [22.26, 60.45], [22.26, 60.46], [22.25, 60.45]]] }, properties: { maksuvyohyke: '1', maksuvyohykehinta: '3,6 €/h', maksullisuus_arki: '9-20', maksullisuus_lauantai: '9-17', maksullisuus_sunnuntai: 'ei maksua', Lisatieto: 'note' } },
-        { type: 'Feature', geometry: null, properties: { maksuvyohyke: '9' } },
-      ],
-    });
-
-    expect(features.map((feature) => feature.id)).toEqual(['turku:maksuvyohyke:1', 'turku:maksuvyohyke:3']);
-    const zone1 = features[0].properties.parking;
-    expect(zone1).toMatchObject({ provider: 'turku-ogc', municipality: 'turku', kind: 'paid', hourlyPrice: 3.6, zone: '1', maxStayMinutes: 'unlimited', scheduleMeaning: 'charge' });
-    expect(zone1.scheduleLabel).toBe('ma–pe 9-20, la 9-17');
-    expect(zone1.schedule.byDay[1]).toEqual([{ start: 540, end: 1200 }]);
-    expect(zone1.schedule.byDay[6]).toEqual([{ start: 540, end: 1020 }]);
-    expect(zone1.schedule.byDay[0]).toEqual([]);
-    // JSON keeps the no-limit sentinel a string; Infinity would serialise to null.
-    expect(JSON.parse(JSON.stringify(zone1)).maxStayMinutes).toBe('unlimited');
-    // The Z ordinate the OGC API adds is stripped from the stored geometry.
-    expect(features[1].geometry.coordinates[0][0]).toEqual([22.25, 60.45]);
-  });
-
-  it('normalizes Turku permit districts into resident-overlay features', () => {
-    const zones = parseTurkuResidentZones({
-      type: 'FeatureCollection',
-      features: [
-        { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[22.25, 60.45, 0], [22.26, 60.45, 0], [22.26, 60.46, 0], [22.25, 60.45, 0]]] }, properties: { Lupapysakointialue: 'Lupapysäköintialue D', Hinta: '24,28€/kk (sis. alv 25.5%)' } },
-        { type: 'Feature', geometry: null, properties: { Lupapysakointialue: 'Lupapysäköintialue X' } },
-      ],
-    });
-    expect(zones).toHaveLength(1);
-    expect(zones[0]).toMatchObject({
-      id: 'turku:lupavyohyke:D',
-      properties: { municipality: 'turku', asukaspysakointitunnus: 'D', permitPrice: '24,28€/kk (sis. alv 25.5%)' },
-    });
-    // Overlay features carry no `parking` contract — they never become spots.
-    expect(zones[0].properties.parking).toBeUndefined();
-    // Z ordinate stripped like the paid zones.
-    expect(zones[0].geometry.coordinates[0][0]).toEqual([22.25, 60.45]);
-    expect(new URL(turkuResidentZonesUrl()).pathname).toContain('Lupapysakointialueet');
-  });
-
-  it('ships a valid committed Turku snapshot with payment and permit zones', () => {
-    const snapshot = JSON.parse(readFileSync('public/data/turku-parking.json', 'utf8'));
-    expect(snapshot.schemaVersion).toBe(1);
-    expect(snapshot.features).toHaveLength(3);
-    expect(snapshot.features.map((feature) => feature.id).sort()).toEqual(['turku:maksuvyohyke:1', 'turku:maksuvyohyke:2', 'turku:maksuvyohyke:3']);
-    snapshot.features.forEach((feature) => {
-      const parking = feature.properties.parking;
-      expect(parking).toMatchObject({ provider: 'turku-ogc', municipality: 'turku', kind: 'paid', scheduleMeaning: 'charge' });
-      expect(typeof parking.hourlyPrice).toBe('number');
-      expect(parking.schedule.byDay).toHaveLength(7);
-      expect(['Polygon', 'MultiPolygon']).toContain(feature.geometry.type);
-    });
-    expect(Array.isArray(snapshot.residentZones)).toBe(true);
-    expect(snapshot.residentZones.length).toBeGreaterThanOrEqual(1);
-    snapshot.residentZones.forEach((feature) => {
-      expect(feature.properties.asukaspysakointitunnus).toBeTruthy();
-      expect(feature.properties.parking).toBeUndefined();
-      expect(['Polygon', 'MultiPolygon']).toContain(feature.geometry.type);
-    });
   });
 
   it('parses regional schedule variants conservatively', () => {

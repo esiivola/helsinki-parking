@@ -13,7 +13,6 @@ export const MUNICIPALITY_COVERAGE = {
   // never infer a rule. Kept as coverage rectangles rather than exact municipal
   // borders because the cities are far from the metro area and from each other.
   tampere: { west: 23.60, south: 61.42, east: 23.98, north: 61.56 },
-  turku: { west: 22.14, south: 60.40, east: 22.36, north: 60.50 },
 };
 
 // Simplified official municipality boundaries from Service Map's `muni`
@@ -67,7 +66,6 @@ export function providerIdsForBounds(bounds) {
   if (geometryIntersectsBounds(MUNICIPALITY_BOUNDARIES.espoo, bounds)) providers.push('espoo');
   if (geometryIntersectsBounds(MUNICIPALITY_BOUNDARIES.vantaa, bounds)) providers.push('vantaa');
   if (boundsIntersect(bounds, MUNICIPALITY_COVERAGE.tampere)) providers.push('tampere');
-  if (boundsIntersect(bounds, MUNICIPALITY_COVERAGE.turku)) providers.push('turku');
   return providers;
 }
 
@@ -82,7 +80,6 @@ export function municipalityForPoint(point) {
   if (pointInGeometry(coordinate, MUNICIPALITY_BOUNDARIES.vantaa)) return 'vantaa';
   if (pointInGeometry(coordinate, MUNICIPALITY_BOUNDARIES.helsinki)) return 'helsinki';
   if (pointInBounds(coordinate, MUNICIPALITY_COVERAGE.tampere)) return 'tampere';
-  if (pointInBounds(coordinate, MUNICIPALITY_COVERAGE.turku)) return 'turku';
   return null;
 }
 
@@ -405,10 +402,9 @@ function tampereMaxStayMinutes(value) {
   return Number.isFinite(hours) && hours > 0 ? Math.round(hours * 60) : null;
 }
 
-// Tampere and Turku both list a window per day type as text ("8-18", "9-20").
-// Build the shared byDay schedule the rules engine reads (index 0 = Sunday), and
-// only name days that actually parsed to hours so sentinels like "ei maksua"
-// (no charge) drop out of the label instead of reading as a time window.
+// Tampere lists a window per day type as text ("8-18"). Build the shared byDay
+// schedule the rules engine reads (index 0 = Sunday), naming only days that
+// actually parsed to hours so non-time text drops out of the label.
 function paidHoursSchedule(weekdayText, saturdayText, sundayText) {
   const weekday = parseTimeRanges(weekdayText);
   const saturday = parseTimeRanges(saturdayText);
@@ -534,117 +530,6 @@ function normalizeTampereFeature(feature) {
 export function parseTampereParking(data) {
   const features = Array.isArray(data?.features) ? data.features : [];
   return features.map(normalizeTampereFeature).filter(Boolean);
-}
-
-// Turku's OGC API Features endpoint blocks cross-origin browser reads, so its
-// paid-parking zones are fetched server-side by the update script and shipped as
-// a static snapshot. The layer is three large payment-zone polygons (I/II/III)
-// carrying the euro tariff and the paid hours per day type — the same zone-level
-// shape as Helsinki's payment zones, drawn here as ordinary tappable areas.
-const TURKU_OGC = 'https://turku.asiointi.fi/trimbleogcapi';
-const TURKU_ZONE_COLLECTION = 'GIS:Pysakoinnin_maksuvyohykkeet';
-
-export function turkuParkingUrl(limit = 1000) {
-  return `${TURKU_OGC}/collections/${encodeURIComponent(TURKU_ZONE_COLLECTION)}/items?f=json&limit=${limit}`;
-}
-
-// `maksuvyohykehinta` is text like "3,6 €/h"; take the leading euro amount.
-function turkuHourlyPrice(value) {
-  const match = /(\d+(?:[.,]\d+)?)\s*€/.exec(String(value ?? ''));
-  return match ? Number(match[1].replace(',', '.')) : null;
-}
-
-// Drop any Z ordinate the OGC API includes so the stored geometry stays 2-D.
-function geometryTo2D(geometry) {
-  const ring = (points) => points.map((point) => [point[0], point[1]]);
-  if (geometry.type === 'Polygon') return { type: 'Polygon', coordinates: geometry.coordinates.map(ring) };
-  if (geometry.type === 'MultiPolygon') return { type: 'MultiPolygon', coordinates: geometry.coordinates.map((polygon) => polygon.map(ring)) };
-  return geometry;
-}
-
-function normalizeTurkuZone(feature) {
-  const geometry = feature?.geometry;
-  if (!geometry || !['Polygon', 'MultiPolygon'].includes(geometry.type) || !Array.isArray(geometry.coordinates)) return null;
-  const properties = feature.properties || {};
-  const zone = trimText(properties.maksuvyohyke);
-  if (!zone) return null;
-  const paid = paidHoursSchedule(properties.maksullisuus_arki, properties.maksullisuus_lauantai, properties.maksullisuus_sunnuntai);
-  return {
-    type: 'Feature',
-    id: `turku:maksuvyohyke:${zone}`,
-    geometry: geometryTo2D(geometry),
-    properties: {
-      municipality: 'turku',
-      parking: {
-        provider: 'turku-ogc',
-        municipality: 'turku',
-        sourceId: zone,
-        kind: 'paid',
-        hourlyPrice: turkuHourlyPrice(properties.maksuvyohykehinta),
-        zone,
-        permit: '',
-        // The zone layer names no maximum stay; paying keeps the space, so the
-        // serialisable sentinel renders as "no time limit".
-        maxStayMinutes: 'unlimited',
-        maxStayAssumed: false,
-        stayRules: [],
-        schedule: paid.schedule,
-        scheduleLabel: paid.label,
-        scheduleMeaning: 'charge',
-        rawLabel: `Maksuvyöhyke ${zone}`,
-        notes: trimText(properties.Lisatieto),
-        estimatedSpaces: null,
-        attribution: 'City of Turku, CC BY 4.0',
-      },
-    },
-  };
-}
-
-export function parseTurkuParking(data) {
-  const features = Array.isArray(data?.features) ? data.features : [];
-  return features.map(normalizeTurkuZone).filter(Boolean).sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true }));
-}
-
-// Turku's `GIS:Lupapysakointialueet` are the resident/company permit districts
-// (A–M). They are informational overlays — a permit lets residents park here; a
-// visitor still follows the underlying paid/free rule — so they render like
-// Helsinki's resident-zone overlay, not as their own parkable areas.
-const TURKU_RESIDENT_COLLECTION = 'GIS:Lupapysakointialueet';
-
-export function turkuResidentZonesUrl(limit = 1000) {
-  return `${TURKU_OGC}/collections/${encodeURIComponent(TURKU_RESIDENT_COLLECTION)}/items?f=json&limit=${limit}`;
-}
-
-// "Lupapysäköintialue D" → "D"; fall back to the whole trimmed string.
-function turkuZoneCode(value) {
-  const text = trimText(value);
-  const match = /([A-ZÅÄÖ0-9]+)\s*$/.exec(text);
-  return match ? match[1] : text;
-}
-
-function normalizeTurkuResidentZone(feature) {
-  const geometry = feature?.geometry;
-  if (!geometry || !['Polygon', 'MultiPolygon'].includes(geometry.type) || !Array.isArray(geometry.coordinates)) return null;
-  const properties = feature.properties || {};
-  const code = turkuZoneCode(properties.Lupapysakointialue);
-  if (!code) return null;
-  return {
-    type: 'Feature',
-    id: `turku:lupavyohyke:${code}`,
-    geometry: geometryTo2D(geometry),
-    properties: {
-      municipality: 'turku',
-      // The resident-zone overlay reads this field for its label.
-      asukaspysakointitunnus: code,
-      permitPrice: trimText(properties.Hinta),
-      attribution: 'City of Turku, CC BY 4.0',
-    },
-  };
-}
-
-export function parseTurkuResidentZones(data) {
-  const features = Array.isArray(data?.features) ? data.features : [];
-  return features.map(normalizeTurkuResidentZone).filter(Boolean).sort((a, b) => a.id.localeCompare(b.id, 'en'));
 }
 
 function durationMinutes(value) {

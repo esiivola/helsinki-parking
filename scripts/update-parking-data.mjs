@@ -1,6 +1,6 @@
 import { mkdir, rename, writeFile } from 'node:fs/promises';
 
-import { normalizeVantaaParking, parseTurkuParking, parseTurkuResidentZones, turkuParkingUrl, turkuResidentZonesUrl } from '../src/parking-providers.js';
+import { normalizeVantaaParking } from '../src/parking-providers.js';
 
 const WFS = 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs';
 const SERVICE_MAP = 'https://api.hel.fi/servicemap/v2/';
@@ -15,7 +15,6 @@ const OVERPASS = 'https://overpass-api.de/api/interpreter';
 const HELSINKI = [60.16986, 24.93838];
 const REFERENCE_OUTPUT = new URL('../public/data/parking-reference.json', import.meta.url);
 const VANTAA_OUTPUT = new URL('../public/data/vantaa-parking.json', import.meta.url);
-const TURKU_OUTPUT = new URL('../public/data/turku-parking.json', import.meta.url);
 const VANTAA_TILE_DIRECTORY = new URL('../public/data/vantaa-parking/', import.meta.url);
 const VANTAA_TILE_ORIGIN = { longitude: 24.7, latitude: 60.2 };
 const VANTAA_TILE_SIZE = { longitude: 0.1, latitude: 0.05 };
@@ -235,8 +234,6 @@ async function main() {
     vantaaParkingAreas,
     vantaaStreetParkingAreas,
     vantaaPayZones,
-    turkuZones,
-    turkuResidentZoneRows,
   ] = await Promise.all([
     fetchJson(wfsUrl('Pysakoinnin_maksuvyohykkeet_alue', 20), 30000),
     fetchJson(wfsUrl('Asukas_ja_yrityspysakointivyohykkeet_alue', 40), 30000),
@@ -245,8 +242,6 @@ async function main() {
     fetchPages(vantaaUrl('parking_area'), 'Vantaa parking areas'),
     fetchPages(vantaaUrl('street_parking_area'), 'Vantaa street parking areas'),
     fetchPages(vantaaUrl('parking_payzone'), 'Vantaa parking pay zones'),
-    fetchJson(turkuParkingUrl(), 45000),
-    fetchJson(turkuResidentZonesUrl(), 45000),
   ]);
   const osmFacilities = await fetchJson(overpassUrl(), 60000);
 
@@ -258,8 +253,6 @@ async function main() {
   requireRows(vantaaStreetParkingAreas, 'results', 'Vantaa street parking areas');
   requireRows(vantaaPayZones, 'results', 'Vantaa parking pay zones');
   requireRows(osmFacilities, 'elements', 'OpenStreetMap facilities');
-  requireRows(turkuZones, 'features', 'Turku parking zones');
-  requireRows(turkuResidentZoneRows, 'features', 'Turku permit zones');
 
   const regionalLiipi = { ...liipiFacilities, results: regionalLiipiRows(liipiFacilities) };
   regionalLiipi.count = regionalLiipi.results.length;
@@ -276,10 +269,6 @@ async function main() {
   const vantaaFeatures = normalizeVantaaParking({ results: vantaaRows }, payZones);
   validateFeatures(vantaaFeatures, 'Vantaa parking');
 
-  const turkuFeatures = parseTurkuParking(turkuZones);
-  validateFeatures(turkuFeatures, 'Turku parking');
-  const turkuResidentZones = parseTurkuResidentZones(turkuResidentZoneRows);
-  validateFeatures(turkuResidentZones, 'Turku permit zones');
 
   const generatedAt = new Date().toISOString();
   const source = {
@@ -305,14 +294,6 @@ async function main() {
       featureCount: features.length,
     })),
   };
-  const turkuParking = {
-    schemaVersion: 1,
-    generatedAt,
-    type: 'FeatureCollection',
-    source: { name: 'City of Turku open data', url: turkuParkingUrl(), license: 'CC BY 4.0' },
-    features: turkuFeatures,
-    residentZones: turkuResidentZones,
-  };
   const snapshot = {
     schemaVersion: 2,
     generatedAt,
@@ -326,11 +307,6 @@ async function main() {
         path: 'data/vantaa-parking.json',
         featureCount: vantaaFeatures.length,
         tileCount: tiles.length,
-      },
-      turku: {
-        path: 'data/turku-parking.json',
-        featureCount: turkuFeatures.length,
-        residentZoneCount: turkuResidentZones.length,
       },
     },
   };
@@ -350,13 +326,11 @@ async function main() {
   const staged = await Promise.all([
     stageJson(REFERENCE_OUTPUT, snapshot),
     stageJson(VANTAA_OUTPUT, vantaaParking),
-    stageJson(TURKU_OUTPUT, turkuParking),
     ...tileFiles,
   ]);
   for (const file of staged) await rename(file.temporary, file.output);
   console.log(`Updated ${REFERENCE_OUTPUT.pathname}`);
   console.log(`Updated ${VANTAA_OUTPUT.pathname} (${vantaaFeatures.length} features in ${tiles.length} tiles)`);
-  console.log(`Updated ${TURKU_OUTPUT.pathname} (${turkuFeatures.length} paid zones, ${turkuResidentZones.length} permit zones)`);
 }
 
 await main();
