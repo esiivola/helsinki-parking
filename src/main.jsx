@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PARKABLE_KINDS, classifyParkingSpot, formatStayMinutes, isGeneralParkingFeature, nextPaidStart, nextScheduleStart, parkingNowStatus, parkingPermitCode, parseParkingValidity, schedulePeriodAt, SHORT_STAY_MINUTES } from './parking-rules.js';
-import { espooParkingUrl, filterFeaturesToBounds, liipiFacilities, municipalityForPoint, parseEspooParkingGml, parseTampereParking, providerIdsForBounds, tampereParkingUrl } from './parking-providers.js';
+import { CURB_COVERAGE, espooParkingUrl, filterFeaturesToBounds, liipiFacilities, municipalityForPoint, parseEspooParkingGml, parseTampereParking, providerIdsForBounds, tampereParkingUrl } from './parking-providers.js';
 import { EVENT_PARKING_LOTS, linkedEventsUrl, overlappingEvent } from './special-parking.js';
 import {
   AlertTriangle,
@@ -31,7 +31,10 @@ const REFERENCE_DATA = `${import.meta.env.BASE_URL}data/parking-reference.json`;
 const VANTAA_DATA = `${import.meta.env.BASE_URL}data/vantaa-parking.json`;
 const MIN_PARKING_ZOOM = 16;
 const MIN_FACILITY_ZOOM = 14;
-export const DEFAULT_MAP_ZOOM = MIN_PARKING_ZOOM;
+// Open on a wider overview than the spot-loading zoom: the coverage overlay
+// guides the user to where curb data exists, and no per-space data loads until
+// they zoom in — so the wider default stays as fast as before.
+export const DEFAULT_MAP_ZOOM = 13;
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, value) => String(value).padStart(2, '0'));
 const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, value) => String(value * 5).padStart(2, '0'));
 const CACHE_PREFIX = 'regional-parking:v4:';
@@ -1193,7 +1196,7 @@ function App() {
   const mapRef = useRef(null);
   const userMarkerRef = useRef(null);
   const timePickerRef = useRef(null);
-  const layersRef = useRef({ zones: null, residents: null, spots: null, closures: null, facilities: null });
+  const layersRef = useRef({ coverage: null, zones: null, residents: null, spots: null, closures: null, facilities: null });
   const dataRef = useRef({ zones: [], residents: [], spots: [], closures: [] });
   const parkingAbort = useRef(null);
   const parkingCache = useRef(new Map());
@@ -1470,6 +1473,19 @@ function App() {
       onEachFeature: (feature, layer) => { const label = parkingAreaLabel(feature, 'resident', lang); if (label) layer.bindTooltip(label, { permanent: true, direction: 'center', className: 'area-zone-label resident', opacity: 1 }); },
     }).addTo(groups.residents);
   }, [mapData.zones, mapData.residents, layers, lang]);
+
+  useEffect(() => {
+    const groups = layersRef.current;
+    if (!mapRef.current || !groups.coverage) return;
+    groups.coverage.clearLayers();
+    // Below the spot-loading zoom, outline where curb data exists so the user
+    // knows where to zoom in; at the detailed zoom the real spots take over.
+    if (!layers.street || mapZoom >= MIN_PARKING_ZOOM) return;
+    L.geoJSON(CURB_COVERAGE, {
+      style: { color: '#155eef', weight: 2, fillColor: '#3b82f6', fillOpacity: 0.15, dashArray: '6 5', interactive: false },
+      onEachFeature: (feature, layer) => layer.bindTooltip(feature.properties.name, { permanent: true, direction: 'center', className: 'coverage-label', opacity: 1 }),
+    }).addTo(groups.coverage);
+  }, [mapZoom, layers.street]);
 
   useEffect(() => {
     const group = layersRef.current.spots;
@@ -1839,6 +1855,8 @@ const eventStyles = `
   .event-links a:hover{text-decoration:underline}
   .event-sign{display:flex;align-items:flex-start;gap:6px;margin:10px 0 0;color:#8a5a12;font-size:9px;line-height:1.45}
   .event-sign>svg{flex:0 0 auto;margin-top:1px}
+  .coverage-label{padding:3px 9px;border:0;border-radius:20px;background:rgba(21,94,239,.92);color:#fff;font:700 11px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;letter-spacing:.03em;box-shadow:0 4px 14px rgba(21,94,239,.35);white-space:nowrap}
+  .coverage-label:before,.coverage-label:after{display:none}
 `;
 
 const rootNode = typeof document !== 'undefined' ? document.getElementById('root') : null;

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { isGeneralParkingFeature } from './parking-rules.js';
 import {
+  CURB_COVERAGE,
   espooParkingUrl,
   filterFeaturesToBounds,
   liipiFacilities,
@@ -343,6 +344,16 @@ describe('regional parking providers', () => {
     expect(kind['tampere:pysakointi:110']).toBe('permitOnly');
     // Everything except the disc rows is excluded from the tappable car layer.
     expect(rows.filter((r) => isGeneralParkingFeature(r)).map((r) => r.id)).toEqual(['tampere:pysakointi:104', 'tampere:pysakointi:109']);
+  });
+
+  it('exposes curb-data coverage areas (metro + Tampere, no Kauniainen)', () => {
+    const names = CURB_COVERAGE.features.map((feature) => feature.properties.name);
+    expect(names).toEqual(['Helsinki', 'Espoo', 'Vantaa', 'Tampere']);
+    expect(names).not.toContain('Kauniainen');
+    CURB_COVERAGE.features.forEach((feature) => {
+      expect(['Polygon', 'MultiPolygon']).toContain(feature.geometry.type);
+      expect(feature.geometry.coordinates.length).toBeGreaterThan(0);
+    });
   });
 
   it('parses regional schedule variants conservatively', () => {

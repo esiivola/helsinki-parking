@@ -269,7 +269,10 @@ describe('parking map helpers', () => {
   it('only loads street-space polygons at the detailed map zoom', () => {
     expect(shouldLoadParkingSpots(15)).toBe(false);
     expect(shouldLoadParkingSpots(16)).toBe(true);
-    expect(shouldLoadParkingSpots(DEFAULT_MAP_ZOOM)).toBe(true);
+    // The default opens on a wider overview, so no spots load until the user
+    // zooms in — the coverage overlay guides them there.
+    expect(DEFAULT_MAP_ZOOM).toBeLessThan(16);
+    expect(shouldLoadParkingSpots(DEFAULT_MAP_ZOOM)).toBe(false);
   });
 
   it('keeps the parking-area zoom prompt visible until the detailed zoom', () => {

@@ -25,6 +25,24 @@ const MUNICIPALITY_BOUNDARIES = {
   kauniainen: { type: 'MultiPolygon', coordinates: [[[[24.675287,60.211031],[24.677472,60.215397],[24.706264,60.225008],[24.715896,60.224721],[24.73432,60.224171],[24.744871,60.220382],[24.750914,60.218211],[24.739162,60.20711],[24.722176,60.202563],[24.70182,60.206242],[24.675287,60.211031]]]] },
 };
 
+function bboxRing(bounds) {
+  const { west, south, east, north } = bounds;
+  return { type: 'Polygon', coordinates: [[[west, south], [east, south], [east, north], [west, north], [west, south]]] };
+}
+
+// The areas where the app has per-curb parking-rule data, used for the "data
+// available here" overlay shown when the map is zoomed out past the
+// spot-loading level. Kauniainen is left out — it has no open curb-rule data.
+export const CURB_COVERAGE = {
+  type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', properties: { name: 'Helsinki' }, geometry: MUNICIPALITY_BOUNDARIES.helsinki },
+    { type: 'Feature', properties: { name: 'Espoo' }, geometry: MUNICIPALITY_BOUNDARIES.espoo },
+    { type: 'Feature', properties: { name: 'Vantaa' }, geometry: MUNICIPALITY_BOUNDARIES.vantaa },
+    { type: 'Feature', properties: { name: 'Tampere' }, geometry: bboxRing(MUNICIPALITY_COVERAGE.tampere) },
+  ],
+};
+
 const ESPOO_WFS = 'https://kartat.espoo.fi/teklaogcweb/wfs.ashx';
 const SERVICE_MAP_DIVISIONS = 'https://api.hel.fi/servicemap/v2/administrative_division/';
 
