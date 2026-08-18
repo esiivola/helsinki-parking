@@ -4,6 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PARKABLE_KINDS, classifyParkingSpot, formatStayMinutes, isGeneralParkingFeature, nextPaidStart, nextScheduleStart, parkingNowStatus, parkingPermitCode, parseParkingValidity, schedulePeriodAt, SHORT_STAY_MINUTES } from './parking-rules.js';
 import { espooParkingUrl, filterFeaturesToBounds, liipiFacilities, municipalityForPoint, parseEspooParkingGml, parseTampereParking, providerIdsForBounds, tampereParkingUrl } from './parking-providers.js';
+import { EVENT_PARKING_LOTS, linkedEventsUrl, overlappingEvent } from './special-parking.js';
 import {
   AlertTriangle,
   Building2,
@@ -104,6 +105,7 @@ const copy = {
     notices: 'Huomiot', closureActive: 'Työ tai tapahtuma alueella', closureBody: 'Lupa-alue leikkaa valitun pysäköintipaikan. Paikkoja voi olla tilapäisesti pois käytöstä.', removalActive: 'Siirtokehotus tämän paikan lähellä', removalBody: 'Kaupungin Siirtovahti näyttää siirtokehotuksen tällä katuosuudella.', removalPeriod: 'Voimassa', maintenanceUnavailable: 'Aura-ajoneuvojen live-syöte ei ole käytettävissä', maintenanceBody: 'Siirtokehotukset tarkistetaan kaupungin Siirtovahti-palvelusta. Kadulla oleva merkki ratkaisee.', officialRestriction: 'Pysäköinti kielletty', officialRestrictionHint: 'Virallinen rajoitus · tarkista liikennemerkki',
     nearby: 'Pysäköintikohteet lähellä', parkingHall: 'Pysäköintikohde', live: 'Ajantasainen', open: 'Avoinna', closed: 'Suljettu', statusUnknown: 'Aukioloaika ei tiedossa', spaces: 'paikkaa vapaana', totalSpaces: 'Paikkoja yhteensä', priceUnavailable: 'Hinta ei tiedossa', forecast: 'Arvio 2 tunnin kuluttua', facilitiesLoading: 'Haetaan pysäköintikohteita…', facilitiesEmpty: 'Lähistöltä ei löytynyt pysäköintikohteita.', openingHours: 'Aukioloajat', operator: 'Ylläpitäjä', paymentMethods: 'Maksutavat', officialSite: 'Tarkista hinnat ja aukioloajat',
     sources: 'Tietolähteet', advisory: 'Liikennemerkki ratkaisee', disclaimer: 'Sivustolle kootut tiedot voivat olla vanhentuneita tai vääriä. Tarkista aina liikennemerkki ennen pysäköintiä',
+    eventParking: 'Tapahtumapysäköinti', eventChecking: 'Haetaan tapahtumia…', eventFound: 'Tapahtuma tänään · todennäköisesti maksullinen', eventNone: 'Ei jäähallin tapahtumaa tälle päivälle', eventCheckMore: 'Tarkista tapahtumat myös', eventSign: 'Paikan LED-taulu kertoo voimassa olevan säännön.',
     locate: 'Näytä sijaintini', refresh: 'Päivitä tiedot', close: 'Sulje', details: 'Tiedot', showList: 'Lähialueen kohteet', dataUpdated: 'Tiedot päivitetty', dataUpdating: 'Päivitetään tietoja', spotCount: 'pysäköintipaikkaa kartalla', zoomIn: 'Lähennä karttaa nähdäksesi pysäköintipaikat', hour: 'Tunti', minute: 'Minuutti', partialData: 'Osa pysäköintilähteistä ei vastaa', staleData: 'Vantaan pysäköintitiedot ovat yli 10 päivää vanhoja · tarkista liikennemerkki', curbUnsupported: 'Kauniaisten kadunvarsisäännöille ei ole avointa rajapintaa · tarkista liikennemerkki', dataUnavailable: 'Pysäköintitietoja ei voitu ladata',
     permissions: 'Sijaintia ei voitu käyttää', privacy: 'Sijaintitietoa käsitellään vain selaimessasi.', more: 'Lisätiedot', cc: '© Helsinki, Espoo, Vantaa, Tampere / HRI / Palvelukartta / Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
   },
@@ -119,6 +121,7 @@ const copy = {
     notices: 'Advisories', closureActive: 'Works or event in this area', closureBody: 'The permit area overlaps the selected parking space. Spaces may be temporarily unavailable.', removalActive: 'Relocation notice near this space', removalBody: 'The City Siirtovahti service shows a relocation notice on this street section.', removalPeriod: 'Valid', maintenanceUnavailable: 'Live snow-plough positions are unavailable', maintenanceBody: 'Relocation notices are checked through the City Siirtovahti service. The street sign is final.', officialRestriction: 'Parking prohibited', officialRestrictionHint: 'Official restriction · check the street sign',
     nearby: 'Nearby parking facilities', parkingHall: 'Parking facility', live: 'Live', open: 'Open', closed: 'Closed', statusUnknown: 'Opening hours unavailable', spaces: 'spaces available', totalSpaces: 'Total spaces', priceUnavailable: 'Price unavailable', forecast: 'Estimate in 2 hours', facilitiesLoading: 'Finding parking facilities…', facilitiesEmpty: 'No parking facilities were found nearby.', openingHours: 'Opening hours', operator: 'Operator', paymentMethods: 'Payment methods', officialSite: 'Check prices and opening hours',
     sources: 'Data sources', advisory: 'Street signs are final', disclaimer: 'Information collected on this site may be outdated or incorrect. Always check the traffic sign before parking.',
+    eventParking: 'Event parking', eventChecking: 'Checking events…', eventFound: 'Event today · likely paid', eventNone: 'No ice-hall event for this date', eventCheckMore: 'Also check events', eventSign: 'The on-site LED sign shows which rule is in force.',
     locate: 'Show my location', refresh: 'Refresh data', close: 'Close', details: 'Details', showList: 'Nearby facilities', dataUpdated: 'Data updated', dataUpdating: 'Updating data', spotCount: 'spaces on map', zoomIn: 'Zoom in to see parking spaces', hour: 'Hour', minute: 'Minute', partialData: 'Some parking sources are unavailable', staleData: 'Vantaa parking data is more than 10 days old · check the street sign', curbUnsupported: 'No open curb-rule API is available for Kauniainen · check the street sign', dataUnavailable: 'Parking data could not be loaded',
     permissions: 'Location could not be used', privacy: 'Your location is processed only in this browser.', more: 'More information', cc: '© Helsinki, Espoo, Vantaa, Tampere / HRI / Service Map / Fintraffic, CC BY 4.0 · © OpenStreetMap, ODbL',
   },
@@ -1048,19 +1051,38 @@ function SourcePanel({ lang, onClose }) {
 
 export function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTime, onClose }) {
   const t = copy[lang];
+  // Event-conditional lots (e.g. P-jäähalli) check Helsinki's Linked Events feed
+  // for the chosen day. Hooks must run before any early return.
+  const eventCfg = selected?.feature?.properties?.parking?.eventParking || null;
+  const parkingDayKey = `${parkingTime.getFullYear()}-${parkingTime.getMonth()}-${parkingTime.getDate()}`;
+  const [eventState, setEventState] = useState({ loading: false, events: null });
+  useEffect(() => {
+    if (!eventCfg) return undefined;
+    let cancelled = false;
+    setEventState({ loading: true, events: null });
+    fetch(linkedEventsUrl(eventCfg.checkVenues, parkingTime), { headers: { Accept: 'application/json' } })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => { if (!cancelled) setEventState({ loading: false, events: Array.isArray(data?.data) ? data.data : [] }); })
+      .catch(() => { if (!cancelled) setEventState({ loading: false, events: null }); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventCfg, parkingDayKey]);
   if (!selected) return null;
   const { zone, resident } = selected;
   if (!selected.meta) return null;
+  // A trusted (ice-hall) event covering the chosen time flips the lot to paid;
+  // otherwise it stays free-with-disc, and the sign/links caveat always shows.
+  const eventNow = eventCfg && Array.isArray(eventState.events) ? overlappingEvent(eventState.events, parkingTime) : null;
   const locale = lang === 'fi' ? 'fi-FI' : 'en-GB';
   const selectedDate = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(parkingTime);
   const selectedTime = `${selectedDate} · ${dateTimeInputValue(parkingTime).slice(11, 16)}`;
   const state = parkingSpotState(selected.feature, zone, parkingTime, exceptions, lang);
   const meta = state.meta || selected.meta;
   const officialRestriction = hasOfficialParkingRestriction(serviceMap);
-  const cardState = officialRestriction ? 'unavailable' : state.status === 'paid' ? 'paid' : state.status === 'unavailable' ? 'unavailable' : 'free';
+  const cardState = officialRestriction ? 'unavailable' : eventNow ? 'paid' : state.status === 'paid' ? 'paid' : state.status === 'unavailable' ? 'unavailable' : 'free';
   const permit = parkingPermitCode(meta.permit || resident);
   const stay = Number.isFinite(meta.maxStayMinutes) ? formatStayMinutes(meta.maxStayMinutes) : meta.maxStayMinutes === null ? '' : t.noTimeLimit;
-  const headline = officialRestriction ? t.officialRestriction : state.headline;
+  const headline = officialRestriction ? t.officialRestriction : eventNow ? (eventCfg.event[lang] || eventCfg.event.fi) : state.headline;
   const transition = officialRestriction ? t.officialRestrictionHint
     : state.transition ? formatParkingCardTransition(state.transition.kind, state.transition.at, parkingTime, lang)
       : state.note;
@@ -1080,6 +1102,23 @@ export function ParkingPanel({ selected, lang, exceptions, serviceMap, parkingTi
         <h2>{headline}</h2>
         {transition && <p>{transition}</p>}
       </div>
+      {eventCfg && <div className={`event-parking ${eventNow ? 'event-now' : ''}`}>
+        <div className="event-rules">
+          <span>{eventCfg.free[lang] || eventCfg.free.fi}</span>
+          <span>{eventCfg.event[lang] || eventCfg.event.fi}</span>
+        </div>
+        <div className="event-status">
+          <CalendarClock size={14} />
+          <span>{eventState.loading ? t.eventChecking
+            : eventNow ? `${t.eventFound}: ${eventNow.name?.[lang] || eventNow.name?.fi || ''}`
+              : Array.isArray(eventState.events) ? t.eventNone : ''}</span>
+        </div>
+        <div className="event-links">
+          <span>{t.eventCheckMore}:</span>
+          {eventCfg.links.map((link) => <a href={link.url} target="_blank" rel="noreferrer" key={link.url}>{link.name[lang] || link.name.fi} <ExternalLink size={12} /></a>)}
+        </div>
+        <p className="event-sign"><AlertTriangle size={13} /> {t.eventSign}</p>
+      </div>}
       {hasKeyFacts && <dl className="card-key-facts">
         {stay && <div><dt>{t.maxStay}</dt><dd>{stay}{meta.maxStayAssumed ? <small> · {t.assumedStay}</small> : null}</dd></div>}
         {permit && <div><dt>{t.permit}</dt><dd>{permit}</dd></div>}
@@ -1375,7 +1414,7 @@ function App() {
       let request;
       if (provider === 'helsinki') {
         request = jsonWithTimeout(wfsUrl('Pysakointipaikat_alue', { bounds: requestBounds, count: 2000 }), 18000, controller.signal)
-          .then((data) => ({ features: (data.features || []).filter(isGeneralParkingFeature), stale: false }));
+          .then((data) => ({ features: [...(data.features || []).filter(isGeneralParkingFeature), ...filterFeaturesToBounds(EVENT_PARKING_LOTS, requestBounds)], stale: false }));
       } else if (provider === 'espoo') {
         request = textWithTimeout(espooParkingUrl(requestBounds, 5000), 22000, controller.signal)
           .then((xml) => ({ features: parseEspooParkingGml(xml).filter(isGeneralParkingFeature), stale: false }));
@@ -1784,7 +1823,25 @@ const clarityStyles = `
   }
 `;
 
+const eventStyles = `
+  .event-parking{margin:13px 0 2px;padding:12px 13px;border-radius:11px;background:#f1f0e9;border:1px solid var(--line)}
+  .event-parking.event-now{background:#fdeae3;border-color:#f2c9bd}
+  .event-rules{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:650}
+  .event-rules span:first-child{color:#27765c}
+  .event-rules span:last-child{color:#a3631d}
+  .event-status{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:10px;color:#5c605b}
+  .event-status>svg{flex:0 0 auto;color:#6d726d}
+  .event-parking.event-now .event-status{color:#a4433a;font-weight:700}
+  .event-parking.event-now .event-status>svg{color:#a4433a}
+  .event-links{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:10px;font-size:9px}
+  .event-links>span{color:#7a7e79;text-transform:uppercase;letter-spacing:.05em}
+  .event-links a{display:inline-flex;align-items:center;gap:3px;color:#155eef;text-decoration:none}
+  .event-links a:hover{text-decoration:underline}
+  .event-sign{display:flex;align-items:flex-start;gap:6px;margin:10px 0 0;color:#8a5a12;font-size:9px;line-height:1.45}
+  .event-sign>svg{flex:0 0 auto;margin-top:1px}
+`;
+
 const rootNode = typeof document !== 'undefined' ? document.getElementById('root') : null;
-if (rootNode) createRoot(rootNode).render(<><style>{styles + refinedStyles + clarityStyles}</style><App /></>);
+if (rootNode) createRoot(rootNode).render(<><style>{styles + refinedStyles + clarityStyles + eventStyles}</style><App /></>);
 
 export default App;
